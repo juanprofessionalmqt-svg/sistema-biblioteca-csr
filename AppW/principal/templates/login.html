@@ -1,0 +1,530 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso y Artículos Académicos - Repositorio CSR</title>
+    
+    <!-- FAVICON INSTITUCIONAL DE LA PESTAÑA -->
+    <link rel="icon" type="image/png" href="{% static 'Log_BibliotecaWeb.png' %}">
+    <link rel="shortcut icon" type="image/png" href="{% static 'Log_BibliotecaWeb.png' %}">
+    
+    <!-- Carga local de Tailwind CSS y FontAwesome -->
+    <script src="{% static 'js/tailwindcss.js' %}"></script>
+    <link rel="stylesheet" href="{% static 'css/all.min.css' %}">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style> 
+        body { font-family: 'Plus Jakarta Sans', sans-serif; } 
+    </style>
+</head>
+<body class="bg-[#f0f4f9] min-h-screen flex flex-col lg:flex-row overflow-x-hidden text-gray-800">
+
+    <!-- COLUMNA IZQUIERDA: PANEL DE INICIO DE SESIÓN / REGISTRO / VERIFICACIÓN OTP -->
+    <aside id="sidebar-panel" class="w-full lg:w-[360px] bg-white border-b lg:border-b-0 border-gray-200/80 p-5 sm:p-7 flex flex-col justify-between shrink-0 shadow-sm lg:h-screen lg:sticky lg:top-0 lg:overflow-y-auto">
+        <div class="space-y-5">
+            
+            <!-- Encabezado Institucional -->
+            <div class="flex items-center justify-between border-b border-gray-100 pb-4">
+                <div class="flex items-center gap-3">
+                    <img src="{% static 'CSR_icon.png' %}" alt="Logo CSR" class="w-10 h-10 object-contain drop-shadow-sm">
+                    <div>
+                        <h1 class="text-sm font-extrabold text-gray-900 tracking-tight leading-tight">Biblioteca CSR</h1>
+                        <p class="text-[10px] text-[#1d82dc] font-semibold">Repositorio Institucional</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Selector de Pestañas (Se oculta en paso OTP) -->
+            <div id="selector-tabs" class="bg-gray-100 p-1 rounded-2xl flex items-center gap-1 border border-gray-200/60 shadow-inner {% if modo_otp %}hidden{% endif %}">
+                <button type="button" id="tab-login-btn" onclick="activarTab('login')" class="flex-1 py-2 rounded-xl font-bold text-xs transition text-center shadow-sm bg-white text-[#1d82dc]">
+                    <i class="fa-solid fa-right-to-bracket mr-1"></i> Iniciar Sesión
+                </button>
+                <button type="button" id="tab-registro-btn" onclick="activarTab('registro')" class="flex-1 py-2 rounded-xl font-bold text-xs transition text-center text-gray-500 hover:text-gray-800">
+                    <i class="fa-solid fa-user-plus mr-1"></i> Crear Cuenta
+                </button>
+            </div>
+
+            <!-- Notificaciones y Mensajes de Django -->
+            {% if messages %}
+                {% for message in messages %}
+                <div class="p-3 rounded-2xl text-xs font-semibold text-center {% if message.tags == 'error' %}bg-red-50 text-red-600 border border-red-200{% elif message.tags == 'warning' %}bg-amber-50 text-amber-800 border border-amber-200{% else %}bg-emerald-50 text-emerald-700 border border-emerald-200{% endif %} shadow-xs">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            <!-- FORMULARIO 1: INICIAR SESIÓN -->
+            <form id="form-login" method="POST" action="{% url 'login' %}" class="space-y-3.5 {% if modo_otp or modo_registro %}hidden{% endif %}">
+                {% csrf_token %}
+                <div class="space-y-0.5">
+                    <h2 class="text-base font-bold text-gray-900">Bienvenido de nuevo</h2>
+                    <p class="text-[11px] text-gray-500">Ingresa tus datos para acceder al catálogo.</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">Correo electrónico</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-envelope absolute left-3.5 top-3 text-gray-400 text-xs"></i>
+                        <input type="email" name="correo" required placeholder="usuario@colredentorista.edu.co" 
+                               class="w-full bg-gray-50/80 border border-gray-300 rounded-xl pl-9 pr-3 py-2.5 text-xs text-gray-800 outline-none focus:border-[#1d82dc] focus:bg-white focus:ring-2 focus:ring-blue-100 transition">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">Contraseña</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-lock absolute left-3.5 top-3 text-gray-400 text-xs"></i>
+                        <input type="password" name="password" id="loginPass" required placeholder="••••••••" 
+                               class="w-full bg-gray-50/80 border border-gray-300 rounded-xl pl-9 pr-9 py-2.5 text-xs text-gray-800 outline-none focus:border-[#1d82dc] focus:bg-white focus:ring-2 focus:ring-blue-100 transition">
+                        <button type="button" onclick="togglePass('loginPass', 'loginEye')" class="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600">
+                            <i id="loginEye" class="fa-solid fa-eye text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-[#1d82dc] text-white py-3 rounded-xl font-bold text-xs hover:bg-blue-600 active:scale-[0.99] transition shadow-md flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-right-to-bracket"></i> Iniciar Sesión
+                </button>
+            </form>
+
+            <!-- FORMULARIO 2: CREAR CUENTA (ENVÍA CÓDIGO OTP) -->
+            <form id="form-registro" method="POST" action="{% url 'registro' %}" class="space-y-3.5 {% if not modo_registro or modo_otp %}hidden{% endif %}">
+                {% csrf_token %}
+                <div class="space-y-0.5">
+                    <h2 class="text-base font-bold text-gray-900">Registro de Usuarios</h2>
+                    <p class="text-[11px] text-gray-500">Crea tu nueva cuenta institucional.</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">Nombres</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-user absolute left-3.5 top-3 text-gray-400 text-xs"></i>
+                        <input type="text" name="nombre" required placeholder="Tus nombres" 
+                               class="w-full bg-gray-50/80 border border-gray-300 rounded-xl pl-9 pr-3 py-2.5 text-xs text-gray-800 outline-none focus:border-[#1d82dc] focus:bg-white focus:ring-2 focus:ring-blue-100 transition">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">Apellidos</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-user-tag absolute left-3.5 top-3 text-gray-400 text-xs"></i>
+                        <input type="text" name="apellido" id="regApellido" placeholder="Tus apellidos" 
+                               class="w-full bg-gray-50/80 border border-gray-300 rounded-xl pl-9 pr-3 py-2.5 text-xs text-gray-800 outline-none focus:border-[#1d82dc] focus:bg-white focus:ring-2 focus:ring-blue-100 transition">
+                    </div>
+                    <label class="inline-flex items-center gap-1.5 mt-1.5 cursor-pointer">
+                        <input type="checkbox" name="prefiero_no_apellido" onchange="toggleApellido(this)" class="rounded border-gray-300 text-[#1d82dc] focus:ring-[#1d82dc]">
+                        <span class="text-[10px] text-gray-500 font-medium">Sin apellido</span>
+                    </label>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">Correo electrónico</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-envelope absolute left-3.5 top-3 text-gray-400 text-xs"></i>
+                        <input type="email" name="correo" required placeholder="ejemplo@colredentorista.edu.co" 
+                               class="w-full bg-gray-50/80 border border-gray-300 rounded-xl pl-9 pr-3 py-2.5 text-xs text-gray-800 outline-none focus:border-[#1d82dc] focus:bg-white focus:ring-2 focus:ring-blue-100 transition">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">Contraseña</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-lock absolute left-3.5 top-3 text-gray-400 text-xs"></i>
+                        <input type="password" name="password" id="regPass" required placeholder="••••••••" 
+                               class="w-full bg-gray-50/80 border border-gray-300 rounded-xl pl-9 pr-9 py-2.5 text-xs text-gray-800 outline-none focus:border-[#1d82dc] focus:bg-white focus:ring-2 focus:ring-blue-100 transition">
+                        <button type="button" onclick="togglePass('regPass', 'regEye')" class="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600">
+                            <i id="regEye" class="fa-solid fa-eye text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- CASILLA DE ACEPTO DE CONTRATO / TÉRMINOS Y CONDICIONES -->
+                <div class="bg-gray-50/80 p-3 rounded-2xl border border-gray-200/80 space-y-1.5">
+                    <p class="text-[10px] text-gray-500 font-medium leading-tight">
+                        Para continuar tienes que aceptar el contrato de usuario y normas del servicio.
+                    </p>
+                    <label class="flex items-start gap-2 cursor-pointer select-none">
+                        <input type="checkbox" name="acepta_terminos" id="aceptaTerminos" required 
+                               class="mt-0.5 rounded border-gray-300 text-[#1d82dc] focus:ring-[#1d82dc] cursor-pointer shrink-0">
+                        <span class="text-[11px] text-gray-700 font-medium leading-tight">
+                            He leído y acepto los <a href="{% static 'CONTRATO DE USUARIO, POLÍTICAS DE TRATAMIENTO DE DATOS PERSONALES Y REGLAMENTO OPERATIVO DE LA BIBLIOTECA CSR.pdf' %}" target="_blank" class="text-[#1d82dc] font-bold underline hover:text-blue-700 inline-flex items-center gap-1">términos y condiciones del contrato de usuario <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i></a>.
+                        </span>
+                    </label>
+                </div>
+
+                <button type="submit" class="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold text-xs hover:bg-emerald-700 active:scale-[0.99] transition shadow-md flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-paper-plane"></i> Enviar Código OTP por Correo
+                </button>
+            </form>
+
+            <!-- FORMULARIO 3: PASO DE VERIFICACIÓN DE CÓDIGO OTP DE 6 DÍGITOS -->
+            <form id="form-otp" method="POST" action="{% url 'registro' %}" class="space-y-4 {% if not modo_otp %}hidden{% endif %}">
+                {% csrf_token %}
+                <input type="hidden" name="paso_otp" value="confirmar">
+
+                <div class="text-center space-y-2">
+                    <div class="w-12 h-12 bg-blue-50 text-[#1d82dc] rounded-2xl flex items-center justify-center text-xl mx-auto border border-blue-100 shadow-xs">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <h2 class="text-base font-bold text-gray-900">Verifica tu Correo</h2>
+                    <p class="text-[11px] text-gray-500 leading-relaxed">
+                        Ingresa el código de 6 dígitos enviado a <br>
+                        <strong class="text-gray-800 font-bold">{{ correo_otp }}</strong>
+                    </p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1 text-center">Código de Verificación (OTP)</label>
+                    <input type="text" 
+                           name="otp_code" 
+                           maxlength="6" 
+                           pattern="[0-9]{6}"
+                           required 
+                           placeholder="000000" 
+                           autocomplete="off"
+                           class="w-full bg-gray-50 border-2 border-blue-200 rounded-2xl py-3 text-center text-2xl font-mono font-black tracking-[0.4em] text-[#1d82dc] outline-none focus:border-[#1d82dc] focus:bg-white focus:ring-4 focus:ring-blue-100 transition shadow-inner">
+                </div>
+
+                <button type="submit" class="w-full bg-[#1d82dc] text-white py-3.5 rounded-xl font-bold text-xs hover:bg-blue-600 active:scale-[0.99] transition shadow-md flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-circle-check"></i> Verificar y Confirmar Cuenta
+                </button>
+
+                <!-- Botón Cancelar/Volver -->
+                <div class="pt-2 text-center">
+                    <button type="submit" name="paso_otp" value="cancelar" class="text-xs text-gray-500 hover:text-red-600 font-bold transition flex items-center justify-center gap-1 mx-auto">
+                        <i class="fa-solid fa-arrow-left"></i> Cancelar y volver al registro
+                    </button>
+                </div>
+            </form>
+
+        </div>
+
+        <div class="pt-4 border-t border-gray-100 text-center text-[10px] text-gray-400">
+            © Colegio Seminario Redentorista
+        </div>
+    </aside>
+
+    <!-- BARRA REORDENABLE DE TAMAÑO / RESIZER -->
+    <div id="resizer-bar" class="hidden lg:flex w-2.5 hover:w-3 bg-gray-200/80 hover:bg-[#1d82dc] cursor-col-resize shrink-0 transition-all items-center justify-center group relative z-30 select-none" title="Arrastra para cambiar el tamaño de la columna">
+        <div class="w-0.5 h-10 bg-gray-400 group-hover:bg-white rounded-full transition-colors"></div>
+    </div>
+
+    <!-- COLUMNA DERECHA: SECCIÓN EXCLUSIVA DE ARTÍCULOS ACADÉMICOS -->
+    <main class="flex-1 p-5 sm:p-8 max-w-7xl mx-auto space-y-5 w-full overflow-y-auto">
+        
+        <!-- Encabezado de la Galería de Artículos -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-gray-200/70 shadow-xs">
+            <div class="flex items-center gap-3.5">
+                <div class="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl font-bold shrink-0 shadow-xs border border-emerald-100">
+                    <i class="fa-solid fa-newspaper"></i>
+                </div>
+                <div>
+                    <h2 class="text-lg font-bold text-gray-900 tracking-tight">Artículos Académicos e Investigaciones</h2>
+                    <p class="text-xs text-gray-500">Publicaciones públicas desarrolladas por la comunidad académica</p>
+                </div>
+            </div>
+            <span id="contador-articulos" class="text-xs bg-emerald-50 text-emerald-700 font-bold px-3.5 py-1.5 rounded-full border border-emerald-200/80 w-fit shrink-0">
+                Total: {{ articulos|length }}
+            </span>
+        </div>
+
+        <!-- BARRA DE BÚSQUEDA DE ARTÍCULOS EN TIEMPO REAL -->
+        <div class="bg-white p-2.5 rounded-2xl border border-gray-200/80 shadow-xs flex items-center gap-3">
+            <div class="pl-3 text-gray-400 text-sm">
+                <i class="fa-solid fa-magnifying-glass"></i>
+            </div>
+            <input type="text" 
+                   id="buscador-articulos" 
+                   oninput="filtrarArticulos()" 
+                   placeholder="Buscar artículos por título, autor o contenido..." 
+                   class="w-full bg-transparent border-none outline-none text-xs sm:text-sm text-gray-800 placeholder-gray-400">
+            <button type="button" 
+                    id="btn-limpiar-busqueda" 
+                    onclick="limpiarBuscador()" 
+                    class="hidden text-xs text-gray-400 hover:text-gray-700 px-2 py-1 transition">
+                <i class="fa-solid fa-circle-xmark text-sm"></i>
+            </button>
+        </div>
+
+        <!-- Mensaje cuando no se encuentren artículos por la búsqueda -->
+        <div id="sin-resultados-busqueda" class="hidden bg-white p-10 rounded-3xl border border-gray-200/70 shadow-xs text-center space-y-2">
+            <i class="fa-solid fa-magnifying-glass text-4xl text-gray-300 block"></i>
+            <h3 class="font-bold text-gray-800 text-sm">No se encontraron coincidencia con la búsqueda</h3>
+            <p class="text-xs text-gray-500">Intenta buscar con otros términos, autor o palabras clave.</p>
+        </div>
+
+        <!-- Rejilla de Tarjetas de Artículos -->
+        {% if articulos %}
+            <div id="contenedor-articulos" class="columns-1 sm:columns-2 lg:columns-3 gap-5 space-y-5">
+                {% for articulo in articulos %}
+                <div class="articulo-card break-inside-avoid mb-5 w-full bg-white rounded-3xl border border-gray-200/70 shadow-xs overflow-hidden p-4 sm:p-5 hover:shadow-md transition relative"
+                     data-titulo="{{ articulo.titulo|lower }}" 
+                     data-autor="{{ articulo.autor|lower }}" 
+                     data-resumen="{{ articulo.resumen|lower }}">
+                    <div>
+                        {% if articulo.portada %}
+                            <div class="w-full rounded-2xl overflow-hidden mb-3 border border-gray-100 relative bg-gray-50">
+                                <img src="{{ articulo.portada.url }}" class="w-full h-auto object-cover rounded-2xl" alt="{{ articulo.titulo }}">
+                                <div class="absolute top-2 right-2">
+                                    {% if articulo.creado_por_rol == 'Estudiante' %}
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-600 text-white shadow-xs">
+                                            <i class="fa-solid fa-user-graduate text-[9px]"></i> Estudiante
+                                        </span>
+                                    {% elif articulo.creado_por_rol == 'Profesor' or articulo.creado_por_rol == 'Docente' %}
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-600 text-white shadow-xs">
+                                            <i class="fa-solid fa-chalkboard-user text-[9px]"></i> {{ articulo.creado_por_rol }}
+                                        </span>
+                                    {% elif articulo.creado_por_rol == 'Administrador' or articulo.creado_por_rol == 'Admin' %}
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-purple-600 text-white shadow-xs">
+                                            <i class="fa-solid fa-user-shield text-[9px]"></i> {{ articulo.creado_por_rol }}
+                                        </span>
+                                    {% else %}
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-gray-600 text-white shadow-xs">
+                                            <i class="fa-solid fa-user text-[9px]"></i> {{ articulo.creado_por_rol|default:"Publicador" }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="w-full rounded-2xl overflow-hidden mb-3 p-3.5 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100/60 flex items-center justify-between">
+                                <div class="flex items-center gap-2 text-purple-700">
+                                    <i class="fa-solid fa-newspaper text-base"></i>
+                                    <span class="text-[10px] font-bold uppercase tracking-wide">Artículo Académico</span>
+                                </div>
+                                {% if articulo.creado_por_rol == 'Estudiante' %}
+                                    <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-600 text-white shadow-xs">Estudiante</span>
+                                {% elif articulo.creado_por_rol == 'Profesor' or articulo.creado_por_rol == 'Docente' %}
+                                    <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-600 text-white shadow-xs">{{ articulo.creado_por_rol }}</span>
+                                {% elif articulo.creado_por_rol == 'Administrador' or articulo.creado_por_rol == 'Admin' %}
+                                    <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-purple-600 text-white shadow-xs">{{ articulo.creado_por_rol }}</span>
+                                {% else %}
+                                    <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-gray-600 text-white shadow-xs">{{ articulo.creado_por_rol|default:"Publicador" }}</span>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+
+                        <h3 class="font-bold text-gray-900 text-sm sm:text-base leading-snug">{{ articulo.titulo }}</h3>
+                        <p class="text-xs text-gray-500 mt-1">Autor: <span class="font-medium text-gray-800">{{ articulo.autor }}</span></p>
+                    </div>
+
+                    <div class="mt-4 space-y-2">
+                        <details class="group border-t border-gray-100 pt-3 text-xs">
+                            <summary class="flex items-center justify-between cursor-pointer font-semibold text-[#1d82dc] select-none">
+                                <span class="flex items-center gap-1.5"><i class="fa-solid fa-align-left text-xs"></i> Resumen</span>
+                                <i class="fa-solid fa-chevron-down text-[10px] group-open:rotate-180 transition-transform"></i>
+                            </summary>
+                            <p class="mt-2 text-gray-600 bg-gray-50 p-3 rounded-2xl border border-gray-100 text-[11px] leading-relaxed">
+                                {{ articulo.resumen|default:"Sin resumen disponible." }}
+                            </p>
+                        </details>
+
+                        {% if articulo.archivo %}
+                        <div class="mt-3 border-t border-gray-100 pt-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <p class="text-xs font-semibold text-gray-500 flex items-center gap-1">
+                                    <i class="fa-solid fa-eye text-[#1d82dc]"></i> Vista previa:
+                                </p>
+                                <button type="button" 
+                                        onclick="abrirVistaPreviaModal('{{ articulo.archivo.url }}', '{{ articulo.titulo|escapejs }}')"
+                                        class="text-[11px] font-bold text-[#1d82dc] hover:text-blue-700 flex items-center gap-1 bg-blue-50 px-2.5 py-1 rounded-xl border border-blue-100 transition active:scale-95">
+                                    <i class="fa-solid fa-expand"></i> Ampliar
+                                </button>
+                            </div>
+                            <iframe src="{{ articulo.archivo.url }}" class="w-full h-40 sm:h-44 rounded-2xl border border-gray-200 shadow-inner"></iframe>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="bg-white p-12 rounded-3xl border border-gray-200/70 shadow-xs text-center max-w-md mx-auto my-12 space-y-3">
+                <i class="fa-solid fa-newspaper text-5xl text-gray-300 block"></i>
+                <h3 class="font-bold text-gray-800 text-base">No hay artículos publicados</h3>
+                <p class="text-xs text-gray-500">Inicia sesión con tu cuenta para subir y compartir artículos científicos con la comunidad.</p>
+            </div>
+        {% endif %}
+
+    </main>
+
+    <!-- MODAL VISTA PREVIA PDF COMPLETO -->
+    <div id="modal-vista-previa" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 transition-opacity">
+        <div class="bg-white rounded-3xl max-w-5xl w-full h-[85vh] p-6 shadow-2xl border border-gray-100 flex flex-col space-y-4 relative overflow-hidden">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                <div class="flex items-center gap-3 truncate">
+                    <div class="w-10 h-10 bg-blue-50 text-[#1d82dc] rounded-xl flex items-center justify-center text-lg shrink-0">
+                        <i class="fa-solid fa-file-pdf"></i>
+                    </div>
+                    <div class="truncate">
+                        <h2 id="titulo-modal-previa" class="font-bold text-gray-800 text-base truncate">Vista Previa del Documento</h2>
+                        <p class="text-xs text-gray-400">Visualizador de archivo adjunto</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <a id="btn-abrir-nueva-pestana" href="#" target="_blank" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-xs transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Nueva pestaña
+                    </a>
+                    <button onclick="cerrarVistaPreviaModal()" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="flex-1 w-full h-full bg-gray-50 rounded-2xl overflow-hidden border border-gray-200">
+                <iframe id="iframe-modal-previa" src="" class="w-full h-full rounded-2xl"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts de Interacción JS -->
+    <script>
+        // 1. REGULACIÓN DE TAMAÑO / RESIZER
+        const sidebar = document.getElementById('sidebar-panel');
+        const resizer = document.getElementById('resizer-bar');
+        let isResizing = false;
+
+        if (resizer && sidebar) {
+            resizer.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                let newWidth = e.clientX;
+                if (newWidth < 260) newWidth = 260;
+                if (newWidth > 600) newWidth = 600;
+                sidebar.style.width = `${newWidth}px`;
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                }
+            });
+        }
+
+        // 2. BÚSQUEDA DE ARTÍCULOS EN TIEMPO REAL
+        function filtrarArticulos() {
+            const input = document.getElementById('buscador-articulos');
+            const query = input.value.toLowerCase().trim();
+            const btnLimpiar = document.getElementById('btn-limpiar-busqueda');
+            const cards = document.querySelectorAll('.articulo-card');
+            const sinResultados = document.getElementById('sin-resultados-busqueda');
+            const contadorEl = document.getElementById('contador-articulos');
+            
+            if (query.length > 0) {
+                btnLimpiar.classList.remove('hidden');
+            } else {
+                btnLimpiar.classList.add('hidden');
+            }
+
+            let visibles = 0;
+            cards.forEach(card => {
+                const titulo = card.getAttribute('data-titulo') || '';
+                const autor = card.getAttribute('data-autor') || '';
+                const resumen = card.getAttribute('data-resumen') || '';
+
+                if (titulo.includes(query) || autor.includes(query) || resumen.includes(query)) {
+                    card.classList.remove('hidden');
+                    visibles++;
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+
+            if (visibles === 0 && cards.length > 0) {
+                sinResultados.classList.remove('hidden');
+            } else {
+                sinResultados.classList.add('hidden');
+            }
+
+            if (contadorEl) {
+                contadorEl.textContent = `Total: ${visibles}`;
+            }
+        }
+
+        function limpiarBuscador() {
+            const input = document.getElementById('buscador-articulos');
+            input.value = '';
+            filtrarArticulos();
+        }
+
+        // 3. CONMUTACIÓN DE PESTAÑAS (LOGIN / REGISTRO)
+        function activarTab(modo) {
+            const btnLogin = document.getElementById('tab-login-btn');
+            const btnRegistro = document.getElementById('tab-registro-btn');
+            const formLogin = document.getElementById('form-login');
+            const formRegistro = document.getElementById('form-registro');
+            const formOtp = document.getElementById('form-otp');
+
+            formOtp.classList.add('hidden');
+
+            if (modo === 'registro') {
+                btnLogin.className = "flex-1 py-2 rounded-xl font-bold text-xs transition text-center text-gray-500 hover:text-gray-800";
+                btnRegistro.className = "flex-1 py-2 rounded-xl font-bold text-xs transition text-center shadow-sm bg-[#1d82dc] text-white";
+                formLogin.classList.add('hidden');
+                formRegistro.classList.remove('hidden');
+            } else {
+                btnLogin.className = "flex-1 py-2 rounded-xl font-bold text-xs transition text-center shadow-sm bg-white text-[#1d82dc]";
+                btnRegistro.className = "flex-1 py-2 rounded-xl font-bold text-xs transition text-center text-gray-500 hover:text-gray-800";
+                formLogin.classList.remove('hidden');
+                formRegistro.classList.add('hidden');
+            }
+        }
+
+        // 4. VISIBILIDAD DE CONTRASEÑAS
+        function togglePass(inputId, eyeId) {
+            const input = document.getElementById(inputId);
+            const eye = document.getElementById(eyeId);
+            if (input.type === "password") {
+                input.type = "text";
+                eye.classList.remove("fa-eye");
+                eye.classList.add("fa-eye-slash");
+            } else {
+                input.type = "password";
+                eye.classList.remove("fa-eye-slash");
+                eye.classList.add("fa-eye");
+            }
+        }
+
+        // 5. CONTROL OPCIONAL DE APELLIDO
+        function toggleApellido(checkbox) {
+            const input = document.getElementById('regApellido');
+            if (checkbox.checked) {
+                input.value = '';
+                input.disabled = true;
+                input.classList.add('opacity-50', 'bg-gray-200');
+            } else {
+                input.disabled = false;
+                input.classList.remove('opacity-50', 'bg-gray-200');
+            }
+        }
+
+        // 6. MODAL DE VISTA PREVIA PDF
+        function abrirVistaPreviaModal(url, titulo) {
+            const modal = document.getElementById('modal-vista-previa');
+            const iframe = document.getElementById('iframe-modal-previa');
+            const tituloEl = document.getElementById('titulo-modal-previa');
+            const btnPestana = document.getElementById('btn-abrir-nueva-pestana');
+
+            if (iframe) iframe.src = url;
+            if (tituloEl) tituloEl.textContent = titulo || 'Vista Previa del Documento';
+            if (btnPestana) btnPestana.href = url;
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function cerrarVistaPreviaModal() {
+            const modal = document.getElementById('modal-vista-previa');
+            const iframe = document.getElementById('iframe-modal-previa');
+            if (modal) modal.classList.add('hidden');
+            if (iframe) iframe.src = '';
+        }
+    </script>
+
+</body>
+</html>

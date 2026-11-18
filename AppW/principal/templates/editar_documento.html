@@ -1,0 +1,290 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-6">
+    <!-- Encabezado -->
+    <div class="flex items-center gap-4 border-b border-gray-100 pb-4">
+        <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center text-xl font-bold">
+            <i class="fa-solid fa-pen-to-square"></i>
+        </div>
+        <div>
+            <h1 class="text-xl font-bold text-gray-800">Editar {{ tipo|capfirst }}</h1>
+            <p class="text-xs text-gray-500">Modifica la información general, la posición en el plano y gestiona el tiempo de préstamo</p>
+        </div>
+    </div>
+
+    {% if tipo == 'libro' %}
+    <!-- NAVEGACIÓN POR PESTAÑAS (TABS) EXCLUSIVA PARA LIBROS -->
+    <div class="flex border-b border-gray-200 gap-2">
+        <button type="button" onclick="cambiarPestana('tab-info')" id="btn-tab-info" class="pestana-btn px-4 py-2.5 text-xs font-bold border-b-2 border-[#1d82dc] text-[#1d82dc] transition flex items-center gap-2">
+            <i class="fa-solid fa-circle-info"></i> Información General
+        </button>
+        <button type="button" onclick="cambiarPestana('tab-mapa')" id="btn-tab-mapa" class="pestana-btn px-4 py-2.5 text-xs font-bold border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition flex items-center gap-2">
+            <i class="fa-solid fa-map-location-dot"></i> Ubicación en Plano
+        </button>
+        <button type="button" onclick="cambiarPestana('tab-tiempo')" id="btn-tab-tiempo" class="pestana-btn px-4 py-2.5 text-xs font-bold border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition flex items-center gap-2">
+            <i class="fa-solid fa-clock-rotate-left"></i> Gestión de Tiempo
+        </button>
+    </div>
+    {% endif %}
+
+    <!-- FORMULARIO PRINCIPAL DE EDICIÓN -->
+    <form method="POST" enctype="multipart/form-data" class="space-y-5">
+        {% csrf_token %}
+
+        <!-- PESTAÑA 1: INFORMACIÓN GENERAL -->
+        <div id="tab-info" class="pestana-contenido space-y-5">
+            <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1">Título</label>
+                <input type="text" name="titulo" value="{{ documento.titulo }}" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#1d82dc]">
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1">Autor(es)</label>
+                <input type="text" name="autor" value="{{ documento.autor }}" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#1d82dc]">
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1">Descripción / Resumen</label>
+                <textarea name="descripcion" rows="3" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm focus:outline-none focus:border-[#1d82dc]">{% if tipo == 'libro' %}{{ documento.descripcion }}{% else %}{{ documento.resumen }}{% endif %}</textarea>
+            </div>
+
+            {% if tipo == 'libro' %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-2xl border border-gray-200">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Estado del Libro</label>
+                    <select name="estado" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#1d82dc]">
+                        <option value="Disponible" {% if documento.estado == 'Disponible' %}selected{% endif %}>Disponible</option>
+                        <option value="En revision" {% if documento.estado == 'En revision' %}selected{% endif %}>En revisión</option>
+                        <option value="En progreso" {% if documento.estado == 'En progreso' %}selected{% endif %}>En progreso</option>
+                        <option value="Prestado" {% if documento.estado == 'Prestado' %}selected{% endif %}>Prestado</option>
+                        <option value="En devolucion" {% if documento.estado == 'En devolucion' %}selected{% endif %}>En devolución</option>
+                        <option value="Vencido" {% if documento.estado == 'Vencido' %}selected{% endif %}>Vencido</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Ubicación Escrita</label>
+                    <input type="text" name="ubicacion" value="{{ documento.ubicacion }}" placeholder="Ej: Estante 3 - Sección B" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#1d82dc]">
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Nueva Portada (Opcional)</label>
+                    <input type="file" name="portada" accept="image/*" class="block w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-gray-100 file:text-gray-700">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Nuevo PDF (Opcional)</label>
+                    <input type="file" name="archivo_pdf" accept=".pdf" class="block w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-[#1d82dc]">
+                </div>
+            </div>
+        </div>
+
+        {% if tipo == 'libro' %}
+        <!-- PESTAÑA 2: UBICACIÓN EN EL PLANO INTERACTIVO -->
+        <div id="tab-mapa" class="pestana-contenido hidden space-y-3">
+            <div class="flex items-center justify-between">
+                <label class="block text-xs font-semibold text-gray-700">Ubicar en el Plano interactivo (Haz clic para mover el marcador)</label>
+                <span class="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                    <i class="fa-solid fa-arrows-to-dot mr-1"></i> Sincronizado
+                </span>
+            </div>
+            
+            <div id="contenedorMapaEdit" 
+                 data-mapa-url="{% url 'obtener_mapa_api' %}"
+                 data-init-x="{{ documento.posicion_x|default:50 }}"
+                 data-init-y="{{ documento.posicion_y|default:50 }}"
+                 class="relative w-full h-[400px] bg-amber-50/40 border-2 border-dashed border-amber-300 rounded-2xl overflow-hidden cursor-crosshair select-none shadow-inner">
+
+                <div id="pinMapaEdit" class="absolute transform -translate-x-1/2 -translate-y-1/2 z-30 pointer-events-none transition-all duration-200">
+                    <div class="relative flex flex-col items-center">
+                        <div class="w-10 h-10 bg-red-600 text-white rounded-full flex items-center justify-center shadow-xl border-2 border-white text-base animate-bounce">
+                            <i class="fa-solid fa-location-dot"></i>
+                        </div>
+                        <span class="text-[9px] font-bold bg-slate-900/90 text-white px-2 py-0.5 rounded-md border border-slate-700 mt-1 shadow-md whitespace-nowrap">
+                            Ubicación Seleccionada
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <input type="hidden" name="posicion_x" id="posicion_x_edit" value="{{ documento.posicion_x|default:50 }}">
+            <input type="hidden" name="posicion_y" id="posicion_y_edit" value="{{ documento.posicion_y|default:50 }}">
+        </div>
+        {% endif %}
+
+        <div id="contenedor-acciones-guardar" class="flex justify-end gap-3 pt-4 border-t border-gray-100">
+            <a href="{% url 'panel_administracion' %}" class="px-5 py-2.5 rounded-xl text-xs font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 transition">Cancelar</a>
+            <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-[#1d82dc] hover:bg-blue-600 transition shadow-sm">Guardar Cambios</button>
+        </div>
+    </form>
+
+    {% if tipo == 'libro' %}
+    <!-- PESTAÑA 3: GESTIÓN Y MODIFICACIÓN DE TIEMPO (FUERA DEL FORMULARIO PRINCIPAL) -->
+    <div id="tab-tiempo" class="pestana-contenido hidden space-y-4">
+        {% if prestamo_activo %}
+        <div class="bg-amber-50/80 border border-amber-200 rounded-3xl p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-amber-200/80 pb-3">
+                <div>
+                    <h3 class="font-bold text-amber-900 text-sm">Préstamo Activo Detectado</h3>
+                    <p class="text-xs text-amber-700">
+                        Usuario: <strong>{{ prestamo_activo.usuario.cuenta.nombre|default:prestamo_activo.usuario.first_name|default:prestamo_activo.usuario.username }} {{ prestamo_activo.usuario.cuenta.apellido|default:prestamo_activo.usuario.last_name }}</strong>
+                    </p>
+                </div>
+                <span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-200 text-amber-900 border border-amber-300">
+                    {{ prestamo_activo.estado }}
+                </span>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl border border-amber-100 space-y-2 text-xs text-gray-700">
+                <div class="flex justify-between">
+                    <span>Fecha Solicitud:</span>
+                    <strong>{{ prestamo_activo.fecha_solicitud|date:"d/m/Y H:i" }}</strong>
+                </div>
+                <div class="flex justify-between">
+                    <span>Fecha Límite Actual:</span>
+                    <strong class="text-[#1d82dc]">{{ prestamo_activo.fecha_vencimiento|date:"d/m/Y H:i"|default:"Pendiente" }}</strong>
+                </div>
+            </div>
+
+            <!-- Formulario para Añadir o Quitar Tiempo al Préstamo -->
+            <form action="{% url 'modificar_tiempo_prestamo' prestamo_activo.id %}" method="POST" class="space-y-3">
+                {% csrf_token %}
+                <label class="block text-xs font-bold text-amber-900">
+                    <i class="fa-solid fa-clock-rotate-left mr-1"></i> Añadir o Quitar Días de Préstamo
+                </label>
+                
+                <div class="grid grid-cols-2 sm:grid-cols-6 gap-2">
+                    <button type="submit" name="dias" value="-5" class="py-2.5 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl transition shadow-xs">
+                        -5 Días
+                    </button>
+                    <button type="submit" name="dias" value="-3" class="py-2.5 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl transition shadow-xs">
+                        -3 Días
+                    </button>
+                    <button type="submit" name="dias" value="-1" class="py-2.5 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl transition shadow-xs">
+                        -1 Día
+                    </button>
+                    <button type="submit" name="dias" value="1" class="py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold text-xs rounded-xl transition shadow-xs">
+                        +1 Día
+                    </button>
+                    <button type="submit" name="dias" value="3" class="py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold text-xs rounded-xl transition shadow-xs">
+                        +3 Días
+                    </button>
+                    <button type="submit" name="dias" value="5" class="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition shadow-xs">
+                        +5 Días
+                    </button>
+                </div>
+            </form>
+        </div>
+        {% else %}
+        <div class="bg-gray-50 border border-gray-200 rounded-3xl p-8 text-center space-y-2">
+            <div class="w-12 h-12 bg-gray-200 text-gray-500 rounded-2xl flex items-center justify-center mx-auto text-xl font-bold">
+                <i class="fa-solid fa-clock"></i>
+            </div>
+            <h3 class="font-bold text-gray-700 text-sm">Sin préstamos activos</h3>
+            <p class="text-xs text-gray-500 max-w-sm mx-auto">
+                Este libro está registrado actualmente como disponible y no tiene una fecha límite de entrega que modificar.
+            </p>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    function cambiarPestana(tabId) {
+        document.querySelectorAll('.pestana-contenido').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('.pestana-btn').forEach(btn => {
+            btn.classList.remove('border-[#1d82dc]', 'text-[#1d82dc]');
+            btn.classList.add('border-transparent', 'text-gray-500');
+        });
+
+        const targetTab = document.getElementById(tabId);
+        if (targetTab) targetTab.classList.remove('hidden');
+
+        const btnActivo = document.getElementById('btn-' + tabId);
+        if (btnActivo) {
+            btnActivo.classList.remove('border-transparent', 'text-gray-500');
+            btnActivo.classList.add('border-[#1d82dc]', 'text-[#1d82dc]');
+        }
+
+        const contenedorAcciones = document.getElementById('contenedor-acciones-guardar');
+        if (contenedorAcciones) {
+            if (tabId === 'tab-tiempo') {
+                contenedorAcciones.classList.add('hidden');
+            } else {
+                contenedorAcciones.classList.remove('hidden');
+            }
+        }
+    }
+
+    async function cargarMapaEditor() {
+        const lienzo = document.getElementById('contenedorMapaEdit');
+        if (!lienzo) return;
+
+        const mapaUrl = lienzo.dataset.mapaUrl || '';
+        const initX = lienzo.dataset.initX || '50';
+        const initY = lienzo.dataset.initY || '50';
+
+        const pin = document.getElementById('pinMapaEdit');
+        if (pin) {
+            pin.style.left = initX + '%';
+            pin.style.top = initY + '%';
+        }
+
+        lienzo.querySelectorAll('.map-item').forEach(el => el.remove());
+
+        let elementosGuardados = [];
+        if (mapaUrl) {
+            try {
+                const response = await fetch(mapaUrl);
+                const data = await response.json();
+                elementosGuardados = data.elementos || [];
+            } catch (e) {
+                console.error('Error al obtener estructura del mapa:', e);
+            }
+        }
+
+        elementosGuardados.forEach(item => {
+            const div = document.createElement('div');
+            const esEstante = item.tipo === 'estante';
+            div.className = 'map-item absolute rounded flex items-center justify-center text-[10px] font-bold pointer-events-none ' + 
+                            (esEstante ? 'bg-amber-200 border border-amber-400 text-amber-900 shadow-sm' : 'bg-gray-400 opacity-60 text-white');
+            div.style.left = item.x + '%';
+            div.style.top = item.y + '%';
+            div.style.width = item.w + '%';
+            div.style.height = item.h + '%';
+            div.textContent = item.nombre;
+            lienzo.appendChild(div);
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        cargarMapaEditor();
+
+        const mapa = document.getElementById('contenedorMapaEdit');
+        const pin = document.getElementById('pinMapaEdit');
+        const inputX = document.getElementById('posicion_x_edit');
+        const inputY = document.getElementById('posicion_y_edit');
+
+        if (mapa && pin && inputX && inputY) {
+            mapa.addEventListener('click', (e) => {
+                const rect = mapa.getBoundingClientRect();
+                
+                let posX = Math.round(((e.clientX - rect.left) / rect.width) * 100);
+                let posY = Math.round(((e.clientY - rect.top) / rect.height) * 100);
+
+                posX = Math.max(2, Math.min(98, posX));
+                posY = Math.max(2, Math.min(98, posY));
+
+                pin.style.left = posX + '%';
+                pin.style.top = posY + '%';
+
+                inputX.value = posX;
+                inputY.value = posY;
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-4">
+    <div class="flex items-center justify-between bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+        <div>
+            <h1 class="text-xl font-bold text-gray-800">Plano Físico de la Biblioteca</h1>
+            <p class="text-xs text-gray-500">
+                {% if libro_seleccionado %}
+                    Mostrando posición del libro: <strong>{{ libro_seleccionado.titulo }}</strong>
+                {% else %}
+                    Ubicaciones físicas de todos los libros
+                {% endif %}
+            </p>
+        </div>
+        <a href="{% url 'index' %}" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition">
+            <i class="fa-solid fa-arrow-left"></i> Volver al Catálogo
+        </a>
+    </div>
+
+    <!-- Contenedor del Mapa Standalone -->
+    <div class="relative w-full h-[520px] bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl flex items-center justify-center p-4">
+        
+        <!-- Plano Estándar -->
+        <div class="absolute inset-0 p-6 grid grid-cols-12 grid-rows-6 gap-3 opacity-80 pointer-events-none select-none text-[11px] text-slate-400 font-bold">
+            <div class="col-span-3 row-span-2 border-2 border-slate-700/80 bg-slate-800/40 rounded-2xl p-3 flex flex-col justify-between">
+                <span>ENTRADA / RECEPCIÓN</span>
+                <i class="fa-solid fa-door-open text-xl text-slate-500"></i>
+            </div>
+            <div class="col-span-5 row-span-2 border-2 border-slate-700/80 bg-slate-800/40 rounded-2xl p-3 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-desktop text-slate-500"></i>
+                <span>ZONA DIGITAL Y BÚSQUEDA</span>
+            </div>
+            <div class="col-span-4 row-span-2 border-2 border-slate-700/80 bg-slate-800/40 rounded-2xl p-3 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-users text-slate-500"></i>
+                <span>SALA DE LECTURA</span>
+            </div>
+
+            <div class="col-span-4 row-span-4 border-2 border-emerald-900/50 bg-emerald-950/20 rounded-2xl p-3 flex flex-col justify-between">
+                <span class="text-emerald-400">ESTANTES SECCIÓN A (CIENCIAS)</span>
+                <div class="grid grid-cols-2 gap-2 h-full my-2">
+                    <div class="bg-slate-800/70 border border-slate-700 rounded-xl flex items-center justify-center text-xs">Estante 1</div>
+                    <div class="bg-slate-800/70 border border-slate-700 rounded-xl flex items-center justify-center text-xs">Estante 2</div>
+                </div>
+            </div>
+
+            <div class="col-span-4 row-span-4 border-2 border-blue-900/50 bg-blue-950/20 rounded-2xl p-3 flex flex-col justify-between">
+                <span class="text-blue-400">ESTANTES SECCIÓN B (LITERATURA)</span>
+                <div class="grid grid-cols-2 gap-2 h-full my-2">
+                    <div class="bg-slate-800/70 border border-slate-700 rounded-xl flex items-center justify-center text-xs">Estante 3</div>
+                    <div class="bg-slate-800/70 border border-slate-700 rounded-xl flex items-center justify-center text-xs">Estante 4</div>
+                </div>
+            </div>
+
+            <div class="col-span-4 row-span-4 border-2 border-amber-900/50 bg-amber-950/20 rounded-2xl p-3 flex flex-col justify-between">
+                <span class="text-amber-400">ESTANTES SECCIÓN C (HISTORIA)</span>
+                <div class="grid grid-cols-2 gap-2 h-full my-2">
+                    <div class="bg-slate-800/70 border border-slate-700 rounded-xl flex items-center justify-center text-xs">Estante 5</div>
+                    <div class="bg-slate-800/70 border border-slate-700 rounded-xl flex items-center justify-center text-xs">Estante 6</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Renderizado de Pins de Libros -->
+        {% if libro_seleccionado %}
+            <div class="absolute transform -translate-x-1/2 -translate-y-1/2 z-30" style="left: {{ libro_seleccionado.posicion_x|default:50 }}%; top: {{ libro_seleccionado.posicion_y|default:50 }}%;">
+                <div class="absolute -inset-2 rounded-full bg-emerald-500/40 animate-ping"></div>
+                <div class="relative w-10 h-10 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-2xl border-2 border-white text-base">
+                    <i class="fa-solid fa-location-dot"></i>
+                </div>
+                <div class="absolute bottom-12 left-1/2 transform -translate-x-1/2 w-56 bg-gray-900 text-white p-3 rounded-2xl shadow-2xl text-xs border border-gray-700 text-center">
+                    <p class="font-bold truncate">{{ libro_seleccionado.titulo }}</p>
+                    <p class="text-[10px] text-emerald-400 mt-1">{{ libro_seleccionado.ubicacion|default:"Estante General" }}</p>
+                </div>
+            </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

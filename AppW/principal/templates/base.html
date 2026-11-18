@@ -1,0 +1,151 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Biblioteca y Repositorio CSR{% endblock %}</title>
+
+    <!-- Favicon / Ícono de la pestaña del navegador (Libro Verde) -->
+    <link rel="icon" type="image/png" href="{% static 'Log_BibliotecaWeb.png' %}">
+
+    <!-- Carga local de Tailwind CSS y FontAwesome desde estáticos -->
+    <script src="{% static 'js/tailwindcss.js' %}"></script>
+    <link rel="stylesheet" href="{% static 'css/all.min.css' %}">
+</head>
+<body class="bg-[#f2f5f9] text-gray-800 font-sans min-h-screen flex">
+
+    <!-- Menú Lateral Responsivo -->
+    <aside class="w-16 md:w-64 bg-white/70 backdrop-blur-md border-r border-gray-200/60 flex flex-col justify-between p-2 md:p-4 sticky top-0 h-screen z-20 shrink-0">
+        <div class="space-y-6">
+            
+            <!-- ENCABEZADO INSTITUCIONAL: LOGO Y SITIO WEB -->
+            <div class="flex flex-col items-center md:items-start gap-2 pt-2 border-b border-gray-100 pb-4">
+                <a href="http://www.colredentorista.edu.co/" target="_blank" rel="noopener noreferrer" class="group flex items-center justify-center md:justify-start gap-3 w-full">
+                    
+                    <!-- Logo del Colegio CSR -->
+                    <div class="w-9 h-9 md:w-12 md:h-12 flex items-center justify-center shrink-0">
+                        <img src="{% static 'CSR_icon.png' %}"
+                             alt="Logo Colegio CSR" 
+                             id="logoColegioImg"
+                             onerror="this.classList.add('hidden'); document.getElementById('logoFallbackIcon').classList.remove('hidden');"
+                             class="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105">
+                        
+                        <!-- Ícono de respaldo si falla la carga -->
+                        <div id="logoFallbackIcon" class="hidden w-9 h-9 md:w-10 md:h-10 bg-[#1d82dc] text-white rounded-2xl flex items-center justify-center font-bold text-lg md:text-xl shadow-md">
+                            <i class="fa-solid fa-book-open"></i>
+                        </div>
+                    </div>
+
+                    <div class="hidden md:block overflow-hidden">
+                        <span class="font-bold text-xs md:text-sm text-gray-800 tracking-tight leading-tight block truncate">
+                            Biblioteca CSR
+                        </span>
+                        <span class="text-[11px] text-[#1d82dc] font-semibold flex items-center gap-1 group-hover:underline">
+                            <i class="fa-solid fa-globe text-[10px]"></i> Sitio del Colegio
+                        </span>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Navegación Simplificada -->
+            <nav class="space-y-2">
+                <a href="{% url 'inicio' %}" class="flex items-center justify-center md:justify-start gap-4 px-2 md:px-3 py-3 rounded-2xl text-gray-600 hover:bg-[#e9eff4] hover:text-gray-900 font-medium transition" title="Inicio">
+                    <i class="fa-solid fa-house text-lg w-6 text-center shrink-0"></i>
+                    <span class="hidden md:inline">Inicio</span>
+                </a>
+                <a href="{% url 'subir_documento' %}" class="flex items-center justify-center md:justify-start gap-4 px-2 md:px-3 py-3 rounded-2xl text-gray-600 hover:bg-[#e9eff4] hover:text-gray-900 font-medium transition" title="Subir Documento">
+                    <i class="fa-solid fa-cloud-arrow-up text-lg w-6 text-center shrink-0"></i>
+                    <span class="hidden md:inline">Subir Documento</span>
+                </a>
+
+                <!-- Opciones exclusivas para el Administrador -->
+                {% if request.user.cuenta.rol == 'Administrador' or request.user.is_staff %}
+                <div class="pt-2 space-y-2 border-t border-amber-200/40">
+                    <a href="{% url 'panel_administracion' %}" class="flex items-center justify-center md:justify-start gap-4 px-2 md:px-3 py-3 rounded-2xl text-amber-800 bg-amber-50 hover:bg-amber-100 font-semibold transition border border-amber-200/60" title="Gestión Admin">
+                        <i class="fa-solid fa-sliders text-lg w-6 text-center text-amber-600 shrink-0"></i>
+                        <span class="hidden md:inline">Gestión Admin</span>
+                    </a>
+                    <a href="{% url 'historial' %}" class="flex items-center justify-center md:justify-start gap-4 px-2 md:px-3 py-3 rounded-2xl text-amber-800 bg-amber-50 hover:bg-amber-100 font-semibold transition border border-amber-200/60" title="Historial Libros">
+                        <i class="fa-solid fa-clock-rotate-left text-lg w-6 text-center text-amber-600 shrink-0"></i>
+                        <span class="hidden md:inline">Historial Libros</span>
+                    </a>
+                </div>
+                {% endif %}
+            </nav>
+        </div>
+
+        <!-- Menú Desplegable: Mi Cuenta -->
+        <div class="pt-4 border-t border-gray-200/60 relative" id="cuentaMenuContainer">
+            <button onclick="toggleCuentaMenu()" class="w-full flex items-center justify-center md:justify-between p-1.5 md:p-2 rounded-2xl hover:bg-[#e9eff4] transition text-left outline-none">
+                <div class="flex items-center justify-center md:justify-start gap-3 overflow-hidden w-full md:w-auto">
+                    <div class="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-[#1d82dc]/10 text-[#1d82dc] flex items-center justify-center font-bold shrink-0 overflow-hidden border border-blue-100">
+                        {% if request.user.cuenta.foto_perfil %}
+                            <img src="{{ request.user.cuenta.foto_perfil.url }}" class="w-full h-full object-cover">
+                        {% elif request.user.first_name %}
+                            <span class="text-sm uppercase">{{ request.user.first_name|slice:":1" }}</span>
+                        {% else %}
+                            <i class="fa-solid fa-user"></i>
+                        {% endif %}
+                    </div>
+
+                    <div class="hidden md:block overflow-hidden">
+                        <p class="text-sm font-semibold text-gray-800 truncate">
+                            {% if request.user.first_name %}
+                                {{ request.user.first_name }} {{ request.user.last_name|default:"" }}
+                            {% else %}
+                                {{ request.user.username }}
+                            {% endif %}
+                        </p>
+                        <p class="text-xs text-gray-500 truncate">
+                            {{ request.user.email|default:request.user.cuenta.correo|default:"Sin correo asociado" }}
+                        </p>
+                    </div>
+                </div>
+                <i class="fa-solid fa-chevron-up hidden md:block text-xs text-gray-400 mr-1"></i>
+            </button>
+
+            <div id="cuentaDropdown" class="hidden absolute bottom-16 left-0 w-48 md:w-60 bg-white rounded-3xl shadow-xl border border-gray-100 p-2 z-50">
+                <a href="{% url 'mi_cuenta' %}" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold text-gray-700 hover:bg-[#e9eff4] hover:text-[#1d82dc] transition">
+                    <i class="fa-solid fa-user-gear text-lg shrink-0"></i>
+                    <span>Abrir centro de cuentas</span>
+                </a>
+                <div class="h-px bg-gray-100 my-1"></div>
+                <a href="{% url 'logout' %}" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold text-red-600 hover:bg-red-50 transition">
+                    <i class="fa-solid fa-arrow-right-from-bracket text-lg shrink-0"></i>
+                    <span>Cerrar sesión</span>
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Contenido Principal -->
+    <div class="flex-1 p-4 md:p-10 max-w-7xl mx-auto space-y-6 w-full min-w-0">
+        <!-- Encabezado con buscador de ancho completo -->
+        <header class="flex items-center justify-between">
+            <form id="formBuscadorGlobal" method="GET" action="{% url 'inicio' %}" class="w-full">
+                <div class="bg-[#e9eff4] rounded-full px-4 md:px-5 py-2.5 md:py-3 flex items-center shadow-sm border border-gray-200/50">
+                    <i class="fa-solid fa-magnifying-glass text-gray-500 mr-3 text-base md:text-lg"></i>
+                    <input type="text" id="inputBuscadorGlobal" name="q" value="{{ query }}" placeholder="Buscar libros o artículos académicos..." class="bg-transparent border-none outline-none w-full text-gray-700 placeholder-gray-500 text-sm md:text-base">
+                    <input type="hidden" name="tipo" value="{{ tipo_activo|default:'libros' }}">
+                </div>
+                <button type="submit" class="hidden"></button>
+            </form>
+        </header>
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <script>
+        function toggleCuentaMenu() {
+            document.getElementById('cuentaDropdown').classList.toggle('hidden');
+        }
+        window.addEventListener('click', function(e) {
+            const container = document.getElementById('cuentaMenuContainer');
+            if (container && !container.contains(e.target)) {
+                document.getElementById('cuentaDropdown').classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

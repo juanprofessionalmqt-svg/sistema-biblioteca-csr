@@ -1,0 +1,382 @@
+{% extends 'base.html' %}
+
+{% block title %}Historial Libros - Biblioteca CSR{% endblock %}
+
+{% block content %}
+{% if request.user.cuenta.rol == 'Administrador' or request.user.is_staff or request.user.is_superuser %}
+<div class="max-w-6xl mx-auto space-y-6">
+    <!-- Encabezado de la página -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-amber-50/80 p-6 rounded-3xl border border-amber-200/60 shadow-sm">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-amber-500 text-white rounded-2xl flex items-center justify-center text-xl font-bold shadow-md shrink-0">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-amber-900">Historial Libros & Control Admin</h1>
+                <p class="text-xs text-amber-700">Haz clic en cualquier fila para abrir el <strong>Contador y Control del Tiempo</strong></p>
+            </div>
+        </div>
+        <span id="contador-prestamos" class="bg-amber-100 text-amber-800 font-bold text-xs px-3.5 py-1.5 rounded-full border border-amber-200/80 w-fit">
+            Total: {{ historial_prestamos|length }}
+        </span>
+    </div>
+
+    <!-- Tabla de Auditoría -->
+    <div class="bg-white rounded-3xl p-6 border border-gray-200/60 shadow-sm overflow-hidden space-y-4">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b border-gray-100 text-gray-400 text-xs uppercase tracking-wider">
+                        <th class="pb-4 font-semibold">Libro (Clic para Contador)</th>
+                        <th class="pb-4 font-semibold">Usuario Prestatario</th>
+                        <th class="pb-4 font-semibold">Ubicación</th>
+                        <th class="pb-4 font-semibold">Estado</th>
+                        <th class="pb-4 font-semibold text-right">Gestión / Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaHistorialBody" class="divide-y divide-gray-50 text-sm">
+                    {% for item in historial_prestamos %}
+                        {% if item.estado != 'Devuelto' %}
+                        <tr class="hover:bg-amber-50/40 cursor-pointer transition fila-historial" 
+                            onclick="abrirModalContador({{ forloop.counter0 }})"
+                            data-index="{{ forloop.counter0 }}"
+                            data-id="{{ item.id }}"
+                            data-titulo="{{ item.libro.titulo|default:'Libro'|escapejs }}"
+                            data-autor="{{ item.libro.autor|default:'No registrado'|escapejs }}"
+                            data-usuario="{{ item.usuario.cuenta.nombre|default:item.usuario.first_name|default:item.usuario.username|escapejs }} {{ item.usuario.cuenta.apellido|default:item.usuario.last_name|escapejs }}"
+                            data-email="{{ item.usuario.email|default:'Sin correo'|escapejs }}"
+                            data-estado="{{ item.estado }}"
+                            data-ubicacion="{{ item.libro.ubicacion|default:'Estante General'|escapejs }}"
+                            data-solicitud="{{ item.fecha_solicitud|date:'d/m/Y H:i' }}"
+                            data-vencimiento="{{ item.fecha_vencimiento|date:'c'|default:'' }}">
+                            
+                            <!-- Columna 1: Libro -->
+                            <td class="py-4 font-semibold text-gray-800">
+                                <div class="font-bold text-[#1d82dc] hover:underline flex items-center gap-2">
+                                    <i class="fa-solid fa-book text-xs text-[#1d82dc]"></i>
+                                    <span>{% if item.libro %}{{ item.libro.titulo }}{% else %}Préstamo #{{ item.id }}{% endif %}</span>
+                                </div>
+                                <span class="text-[10px] text-gray-400 font-normal block mt-0.5">
+                                    Solicitado: {{ item.fecha_solicitud|date:"d/m/Y H:i" }}
+                                </span>
+                            </td>
+
+                            <!-- Columna 2: Usuario Prestatario -->
+                            <td class="py-4 text-xs" onclick="event.stopPropagation();">
+                                {% if item.usuario %}
+                                    <a href="{% url 'editar_cuenta' item.usuario.cuenta.id|default:item.usuario.id %}" 
+                                       title="Clic para administrar usuario"
+                                       class="inline-flex items-center gap-1.5 font-bold text-[#1d82dc] hover:text-blue-700 hover:underline transition bg-blue-50/60 px-2.5 py-1 rounded-xl border border-blue-100">
+                                        <i class="fa-solid fa-user-gear text-[11px]"></i>
+                                        <span>
+                                            {{ item.usuario.cuenta.nombre|default:item.usuario.first_name|default:item.usuario.username }} 
+                                            {{ item.usuario.cuenta.apellido|default:item.usuario.last_name }}
+                                        </span>
+                                    </a>
+                                {% else %}
+                                    <span class="text-gray-400 italic">Sin usuario asignado</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Columna 3: Ubicación -->
+                            <td class="py-4 text-xs text-gray-500">
+                                {{ item.libro.ubicacion|default:"Estante General" }}
+                            </td>
+
+                            <!-- Columna 4: Estado -->
+                            <td class="py-4 text-xs">
+                                {% if item.estado == 'Prestado' or item.libro.estado == 'Prestado' %}
+                                    <span class="bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-lg font-bold border border-emerald-200 inline-flex items-center gap-1">
+                                        <i class="fa-solid fa-check text-[10px]"></i> Prestado
+                                    </span>
+                                {% elif item.estado == 'En devolucion' or item.libro.estado == 'En devolucion' %}
+                                    <span class="bg-rose-100 text-rose-800 px-2.5 py-1 rounded-lg font-bold border border-rose-200 inline-flex items-center gap-1 animate-pulse">
+                                        <i class="fa-solid fa-triangle-exclamation text-[10px]"></i> En Devolución
+                                    </span>
+                                {% elif item.estado == 'En revision' or item.estado == 'En revisión' %}
+                                    <span class="bg-purple-100 text-purple-800 px-2.5 py-1 rounded-lg font-bold border border-purple-200 inline-flex items-center gap-1">
+                                        <i class="fa-solid fa-clock text-[10px]"></i> En Revisión
+                                    </span>
+                                {% else %}
+                                    <span class="bg-gray-100 text-gray-800 px-2.5 py-1 rounded-lg font-bold border border-gray-200">
+                                        {{ item.estado|default:"Disponible" }}
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Columna 5: Acciones -->
+                            <td class="py-4 text-xs text-right" onclick="event.stopPropagation();">
+                                <div class="flex items-center justify-end gap-1.5">
+                                    {% if item.estado != 'Prestado' and item.libro.estado != 'Prestado' %}
+                                    <a href="{% url 'aprobar_prestamo' item.id %}" 
+                                       title="Aprobar préstamo por 5 días"
+                                       class="w-8 h-8 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold flex items-center justify-center shadow-xs transition active:scale-90">
+                                        <i class="fa-solid fa-check text-sm"></i>
+                                    </a>
+                                    {% endif %}
+
+                                    {% if item.libro %}
+                                    <a href="{% url 'devolver_libro' item.libro.id %}" 
+                                       title="Devolver y marcar Disponible"
+                                       onclick="return confirm('¿Deseas devolver este libro y ponerlo Disponible?');"
+                                       class="w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold flex items-center justify-center shadow-xs transition active:scale-90">
+                                        <i class="fa-solid fa-xmark text-sm"></i>
+                                    </a>
+
+                                    <a href="{% url 'editar_documento' 'libro' item.libro.id %}" 
+                                       title="Editar libro"
+                                       class="w-8 h-8 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold flex items-center justify-center shadow-xs transition active:scale-90">
+                                        <i class="fa-solid fa-pen-to-square text-xs"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    {% empty %}
+                        <tr>
+                            <td class="py-8 text-center text-gray-400 text-xs" colspan="5">No hay préstamos registrados en este momento.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CONTADOR Y NAVEGACIÓN EN TIEMPO REAL PARA ADMINISTRADOR -->
+<div id="modal-contador-admin" class="fixed inset-0 bg-gray-900/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 transition-opacity">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 space-y-5 relative overflow-hidden">
+        
+        <!-- Encabezado del Modal -->
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center text-lg font-bold">
+                    <i class="fa-solid fa-stopwatch"></i>
+                </div>
+                <div>
+                    <h2 class="font-bold text-gray-800 text-base">Control de Tiempo de Préstamo</h2>
+                    <p class="text-xs text-gray-400">Añade o quita días del plazo de entrega</p>
+                </div>
+            </div>
+            <button onclick="cerrarModalContador()" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- Cuerpo con Datos y Contador -->
+        <div class="space-y-4">
+            <div>
+                <span id="modal-badge-estado" class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider inline-block mb-2"></span>
+                <h3 id="modal-libro-titulo" class="text-lg font-bold text-gray-900 leading-snug"></h3>
+                <p id="modal-libro-autor" class="text-xs text-gray-500 mt-0.5"></p>
+            </div>
+
+            <!-- Caja de Contador en Tiempo Real -->
+            <div class="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl p-5 text-center shadow-lg border border-slate-700 space-y-2">
+                <p class="text-[11px] uppercase tracking-widest text-gray-400 font-bold">Tiempo Restante de Préstamo</p>
+                <div id="modal-temporizador" class="text-3xl font-black tracking-tight text-amber-400 font-mono">
+                    00d 00h 00m 00s
+                </div>
+                <p id="modal-fecha-limite" class="text-[11px] text-gray-400 pt-1 border-t border-slate-700/60"></p>
+            </div>
+
+            <!-- Panel Admin de Modificación de Tiempo (Añadir / Restar Días) -->
+            <div class="bg-amber-50/70 p-3.5 rounded-2xl border border-amber-200/80 space-y-2">
+                <p class="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                    <i class="fa-solid fa-clock-rotate-left"></i> Añadir o Quitar Tiempo de Préstamo
+                </p>
+                <form id="form-modificar-tiempo-admin" action="" method="POST" class="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                    {% csrf_token %}
+                    <button type="submit" name="dias" value="-5" class="py-1.5 px-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl transition shadow-xs">
+                        -5 Días
+                    </button>
+                    <button type="submit" name="dias" value="-3" class="py-1.5 px-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl transition shadow-xs">
+                        -3 Días
+                    </button>
+                    <button type="submit" name="dias" value="-1" class="py-1.5 px-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl transition shadow-xs">
+                        -1 Día
+                    </button>
+                    <button type="submit" name="dias" value="1" class="py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold text-xs rounded-xl transition shadow-xs">
+                        +1 Día
+                    </button>
+                    <button type="submit" name="dias" value="3" class="py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold text-xs rounded-xl transition shadow-xs">
+                        +3 Días
+                    </button>
+                    <button type="submit" name="dias" value="5" class="py-1.5 px-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition shadow-xs">
+                        +5 Días
+                    </button>
+                </form>
+            </div>
+
+            <!-- Detalles del Usuario Prestatario -->
+            <div class="bg-gray-50 p-3.5 rounded-2xl border border-gray-100 text-xs space-y-1.5 text-gray-600">
+                <div class="flex justify-between">
+                    <span class="font-semibold text-gray-500">Prestatario:</span>
+                    <span id="modal-usuario-nombre" class="font-bold text-gray-800"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="font-semibold text-gray-500">Ubicación Física:</span>
+                    <span id="modal-libro-ubicacion" class="font-bold text-gray-800"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="font-semibold text-gray-500">Fecha Solicitud:</span>
+                    <span id="modal-fecha-solicitud" class="text-gray-700"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navegación entre Libros (Anterior / Siguiente) -->
+        <div class="flex items-center justify-between pt-3 border-t border-gray-100 gap-3">
+            <button id="btn-modal-anterior" onclick="cambiarLibroModal(-1)" class="flex-1 py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-arrow-left"></i> Anterior
+            </button>
+            <button id="btn-modal-siguiente" onclick="cambiarLibroModal(1)" class="flex-1 py-2.5 px-4 bg-[#1d82dc] hover:bg-blue-600 text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 shadow-sm">
+                Siguiente <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let filasLibros = [];
+    let indiceActual = 0;
+    let intervaloTimer = null;
+
+    function actualizarTimer() {
+        if (filasLibros.length === 0) return;
+        const fila = filasLibros[indiceActual];
+        if (!fila) return;
+
+        const isoVencimiento = fila.getAttribute('data-vencimiento');
+        const estado = fila.getAttribute('data-estado');
+        const displayTimer = document.getElementById('modal-temporizador');
+        const displayLimite = document.getElementById('modal-fecha-limite');
+
+        if (!isoVencimiento || estado === 'En revision' || estado === 'En revisión') {
+            displayTimer.textContent = "Pendiente Aprobación";
+            displayTimer.className = "text-2xl font-black text-purple-400 font-mono";
+            displayLimite.textContent = "Al aprobarse se otorgarán 5 días de plazo.";
+            return;
+        }
+
+        const objetivo = new Date(isoVencimiento).getTime();
+        const ahora = new Date().getTime();
+        const diferencia = objetivo - ahora;
+
+        if (diferencia <= 0 || estado === 'En devolucion' || estado === 'Vencido') {
+            displayTimer.textContent = "¡EN DEVOLUCIÓN!";
+            displayTimer.className = "text-2xl font-black text-rose-500 font-mono animate-pulse";
+            displayLimite.textContent = "El tiempo límite ha expirado. Estado: En devolución.";
+        } else {
+            const dias = Math.floor(diferencia / (1000 * 60 * 60 * 24));
+            const horas = Math.floor((diferencia % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutos = Math.floor((diferencia % (1000 * 60 * 60)) / (1000 * 60));
+            const segundos = Math.floor((diferencia % (1000 * 60)) / 1000);
+
+            const hh = String(horas).padStart(2, '0');
+            const mm = String(minutos).padStart(2, '0');
+            const ss = String(segundos).padStart(2, '0');
+
+            displayTimer.textContent = `${dias}d ${hh}h ${mm}m ${ss}s`;
+            displayTimer.className = "text-3xl font-black text-amber-400 font-mono";
+            
+            const fechaFmt = new Date(isoVencimiento).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' });
+            displayLimite.textContent = `Fecha Límite: ${fechaFmt}`;
+        }
+    }
+
+    function renderizarModal() {
+        if (filasLibros.length === 0) return;
+        const fila = filasLibros[indiceActual];
+        if (!fila) return;
+
+        const prestamoId = fila.getAttribute('data-id') || '';
+        const titulo = fila.getAttribute('data-titulo') || '';
+        const autor = fila.getAttribute('data-autor') || '';
+        const usuario = fila.getAttribute('data-usuario') || '';
+        const estado = fila.getAttribute('data-estado') || '';
+        const ubicacion = fila.getAttribute('data-ubicacion') || 'Estante General';
+        const solicitud = fila.getAttribute('data-solicitud') || '';
+
+        document.getElementById('modal-libro-titulo').textContent = titulo;
+        document.getElementById('modal-libro-autor').textContent = `Autor: ${autor}`;
+        document.getElementById('modal-usuario-nombre').textContent = usuario;
+        document.getElementById('modal-libro-ubicacion').textContent = ubicacion;
+        document.getElementById('modal-fecha-solicitud').textContent = solicitud;
+
+        const formAdmin = document.getElementById('form-modificar-tiempo-admin');
+        if (formAdmin && prestamoId) {
+            formAdmin.action = `/modificar-tiempo/${prestamoId}/`;
+        }
+
+        const badge = document.getElementById('modal-badge-estado');
+        if (estado === 'Prestado') {
+            badge.className = 'px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 border border-emerald-200';
+            badge.textContent = 'Prestado';
+        } else if (estado === 'En devolucion' || estado === 'Vencido') {
+            badge.className = 'px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-rose-100 text-rose-800 border border-rose-200';
+            badge.textContent = 'En devolución';
+        } else {
+            badge.className = 'px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-purple-100 text-purple-800 border border-purple-200';
+            badge.textContent = 'En revisión';
+        }
+
+        actualizarTimer();
+
+        if (intervaloTimer) clearInterval(intervaloTimer);
+        intervaloTimer = setInterval(actualizarTimer, 1000);
+
+        document.getElementById('btn-modal-anterior').disabled = indiceActual === 0;
+        document.getElementById('btn-modal-siguiente').disabled = indiceActual === filasLibros.length - 1;
+    }
+
+    function abrirModalContador(index) {
+        filasLibros = Array.from(document.querySelectorAll('.fila-historial:not(.hidden)'));
+        if (filasLibros.length === 0) return;
+
+        const filaOrigen = document.querySelectorAll('.fila-historial')[index];
+        const newIndex = filasLibros.indexOf(filaOrigen);
+        indiceActual = newIndex >= 0 ? newIndex : 0;
+
+        renderizarModal();
+        document.getElementById('modal-contador-admin').classList.remove('hidden');
+    }
+
+    function cerrarModalContador() {
+        document.getElementById('modal-contador-admin').classList.add('hidden');
+        if (intervaloTimer) clearInterval(intervaloTimer);
+    }
+
+    function cambiarLibroModal(direccion) {
+        const nuevoIndex = indiceActual + direccion;
+        if (nuevoIndex >= 0 && nuevoIndex < filasLibros.length) {
+            indiceActual = nuevoIndex;
+            renderizarModal();
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        filasLibros = Array.from(document.querySelectorAll('.fila-historial'));
+    });
+</script>
+
+{% else %}
+<div class="max-w-xl mx-auto bg-white p-8 rounded-3xl border border-gray-100 shadow-sm text-center space-y-6 my-10">
+    <div class="w-16 h-16 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center text-3xl font-bold mx-auto">
+        <i class="fa-solid fa-shield-halved"></i>
+    </div>
+    <div class="space-y-2">
+        <h1 class="text-2xl font-bold text-gray-800">Acceso Exclusivo de Administración</h1>
+        <p class="text-xs text-gray-500 max-w-sm mx-auto">
+            El historial de libros y préstamos está restringido únicamente para los administradores.
+        </p>
+    </div>
+    <div>
+        <a href="{% url 'inicio' %}" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-bold text-white bg-[#1d82dc] hover:bg-blue-600 transition shadow-sm">
+            <i class="fa-solid fa-house"></i> Volver al Inicio
+        </a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

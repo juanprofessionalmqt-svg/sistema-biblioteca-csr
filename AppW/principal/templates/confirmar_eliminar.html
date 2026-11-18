@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-md mx-auto bg-white p-8 rounded-3xl border border-gray-100 shadow-sm text-center space-y-4 mt-8">
+    <div class="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center text-2xl mx-auto">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+    </div>
+
+    <div>
+        <h2 class="text-lg font-bold text-gray-800">¿Eliminar {{ tipo|capfirst }}?</h2>
+        <p class="text-xs text-gray-500 mt-1">Estás a punto de borrar <strong>"{{ documento.titulo }}"</strong>. Esta acción eliminará el registro permanentemente.</p>
+    </div>
+
+    <form method="POST" class="flex justify-center gap-3 pt-4">
+        {% csrf_token %}
+        <a href="{% url 'panel_administracion' %}" class="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-bold rounded-xl transition">Cancelar</a>
+        <button type="submit" class="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-xl transition shadow-sm">Sí, Eliminar</button>
+    </form>
+</div>
+{% endblock %}

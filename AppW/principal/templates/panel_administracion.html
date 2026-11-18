@@ -1,0 +1,550 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+    <!-- Encabezado -->
+    <div class="flex items-center gap-4 bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+        <div class="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center text-2xl font-bold shrink-0">
+            <i class="fa-solid fa-sliders"></i>
+        </div>
+        <div>
+            <h1 class="text-xl font-bold text-gray-800">Panel de Control y Administración</h1>
+            <p class="text-xs text-gray-500">Edita datos, gestiona usuarios registrados o modifica el plano de la biblioteca</p>
+        </div>
+    </div>
+
+    <!-- SECCIÓN: MODIFICAR MAPA DE LA BIBLIOTECA -->
+    <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden transition-all duration-200">
+        <div onclick="toggleSection('sec-mapa', 'icon-mapa')" class="p-6 flex items-center justify-between cursor-pointer hover:bg-gray-50/80 transition select-none">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-base">
+                    <i class="fa-solid fa-map-location-dot"></i>
+                </div>
+                <div>
+                    <h2 class="font-bold text-gray-800 text-base">Modificar Mapa de la Biblioteca</h2>
+                    <p class="text-[11px] text-gray-400">Diseña la distribución física: añade, redimensiona y renombra estanterías, entradas y pasillos</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <i id="icon-mapa" class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-300"></i>
+            </div>
+        </div>
+
+        <div id="sec-mapa" class="hidden p-6 pt-0 border-t border-gray-100 space-y-4">
+            <!-- Barra de Herramientas del Editor -->
+            <div class="flex flex-wrap gap-2 pt-4 border-b border-gray-100 pb-4 items-center justify-between">
+                <div class="flex gap-2">
+                    <button type="button" onclick="crearElemento('estante')" class="px-3 py-1.5 bg-amber-100 text-amber-800 text-xs font-bold rounded-xl hover:bg-amber-200 transition">
+                        <i class="fa-solid fa-plus"></i> Estantería
+                    </button>
+                    <button type="button" onclick="crearElemento('entrada')" class="px-3 py-1.5 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-xl hover:bg-emerald-200 transition">
+                        <i class="fa-solid fa-door-open"></i> Entrada
+                    </button>
+                    <button type="button" onclick="crearElemento('pasillo')" class="px-3 py-1.5 bg-gray-200 text-gray-700 text-xs font-bold rounded-xl hover:bg-gray-300 transition">
+                        <i class="fa-solid fa-plus"></i> Muro
+                    </button>
+                </div>
+                <button type="button" onclick="guardarMapa()" class="px-4 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition shadow-sm">
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar Cambios de Plano
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Lienzo del Mapa -->
+                <div class="md:col-span-2">
+                    <div id="lienzoMapaAdmin" class="relative w-full h-80 bg-amber-50/40 border-2 border-dashed border-amber-300 rounded-2xl overflow-hidden select-none">
+                    </div>
+                </div>
+
+                <!-- Panel de Propiedades del Elemento Seleccionado -->
+                <div class="bg-gray-50 p-4 rounded-2xl border border-gray-200 space-y-3">
+                    <h3 class="text-xs font-bold text-gray-700 border-b pb-2">Propiedades del Elemento</h3>
+                    <div id="panelVacio" class="text-xs text-gray-400 py-6 text-center">Haz clic en un estante, entrada o muro para editar sus dimensiones y nombre.</div>
+                    
+                    <div id="panelEdicion" class="hidden space-y-3">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-gray-600 mb-1">Nombre / Etiqueta</label>
+                            <input type="text" id="propNombre" oninput="actualizarElementoSeleccionado()" class="w-full bg-white border border-gray-200 rounded-xl px-3 py-1.5 text-xs focus:outline-none">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[11px] font-semibold text-gray-600 mb-1">Ancho (%)</label>
+                                <input type="number" id="propAncho" min="5" max="90" oninput="actualizarElementoSeleccionado()" class="w-full bg-white border border-gray-200 rounded-xl px-3 py-1.5 text-xs focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-gray-600 mb-1">Alto (%)</label>
+                                <input type="number" id="propAlto" min="5" max="90" oninput="actualizarElementoSeleccionado()" class="w-full bg-white border border-gray-200 rounded-xl px-3 py-1.5 text-xs focus:outline-none">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[11px] font-semibold text-gray-600 mb-1">Posición X (%)</label>
+                                <input type="number" id="propX" min="0" max="90" oninput="actualizarElementoSeleccionado()" class="w-full bg-white border border-gray-200 rounded-xl px-3 py-1.5 text-xs focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-gray-600 mb-1">Posición Y (%)</label>
+                                <input type="number" id="propY" min="0" max="90" oninput="actualizarElementoSeleccionado()" class="w-full bg-white border border-gray-200 rounded-xl px-3 py-1.5 text-xs focus:outline-none">
+                            </div>
+                        </div>
+                        <button type="button" onclick="eliminarElementoSeleccionado()" class="w-full py-1.5 bg-red-50 text-red-600 font-bold text-xs rounded-xl hover:bg-red-100 transition mt-2">
+                            <i class="fa-solid fa-trash"></i> Eliminar Elemento
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de Libros -->
+    <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden transition-all duration-200">
+        <div onclick="toggleSection('sec-libros', 'icon-libros')" class="p-6 flex items-center justify-between cursor-pointer hover:bg-gray-50/80 transition select-none">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-blue-50 text-[#1d82dc] flex items-center justify-center font-bold text-base">
+                    <i class="fa-solid fa-book"></i>
+                </div>
+                <div>
+                    <h2 class="font-bold text-gray-800 text-base">Libros Registrados</h2>
+                    <p class="text-[11px] text-gray-400">Listado, ubicación y estado físico de los libros</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-xs bg-blue-50 text-[#1d82dc] font-bold px-3 py-1 rounded-full border border-blue-100">
+                    Total: {{ libros|length }}
+                </span>
+                <i id="icon-libros" class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-300"></i>
+            </div>
+        </div>
+
+        <div id="sec-libros" class="hidden p-6 pt-0 border-t border-gray-100 space-y-4">
+            <div class="relative pt-4">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-7 text-gray-400 text-xs"></i>
+                <input type="text" id="search-libros" onkeyup="filtrarTabla('search-libros', 'tabla-libros')" placeholder="Buscar por título, autor o ubicación..." class="w-full pl-10 pr-4 py-2.5 bg-gray-50/50 rounded-2xl border border-gray-200 text-xs focus:outline-none focus:border-[#1d82dc] focus:bg-white transition">
+            </div>
+
+            <div class="overflow-x-auto">
+                <table id="tabla-libros" class="w-full text-left text-sm text-gray-600">
+                    <thead class="bg-gray-50 text-xs text-gray-400 uppercase font-semibold">
+                        <tr>
+                            <th class="p-3 rounded-l-xl">Portada</th>
+                            <th class="p-3">Título</th>
+                            <th class="p-3">Autor</th>
+                            <th class="p-3">Estado</th>
+                            <th class="p-3">Ubicación</th>
+                            <th class="p-3 text-right rounded-r-xl">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for libro in libros %}
+                        <tr class="hover:bg-gray-50/50 transition row-item">
+                            <td class="p-3">
+                                {% if libro.portada %}
+                                    <img src="{{ libro.portada.url }}" class="w-10 h-14 object-cover rounded-xl border border-gray-100 shadow-sm">
+                                {% else %}
+                                    <div class="w-10 h-14 bg-sky-50 text-[#1d82dc] rounded-xl flex items-center justify-center text-[10px] font-bold">Sin foto</div>
+                                {% endif %}
+                            </td>
+                            <td class="p-3 font-semibold text-gray-800 search-target">{{ libro.titulo }}</td>
+                            <td class="p-3 text-gray-500 search-target">{{ libro.autor }}</td>
+                            <td class="p-3 search-target">
+                                {% if libro.estado == 'Prestado' %}
+                                    <span class="px-2.5 py-1 bg-amber-50 text-amber-600 font-bold text-xs rounded-lg border border-amber-200">Prestado</span>
+                                {% elif libro.estado == 'En progreso' or libro.estado == 'En proceso' %}
+                                    <span class="px-2.5 py-1 bg-blue-50 text-blue-600 font-bold text-xs rounded-lg border border-blue-200">En proceso</span>
+                                {% elif libro.estado == 'En revision' or libro.estado == 'En revisión' %}
+                                    <span class="px-2.5 py-1 bg-purple-50 text-purple-600 font-bold text-xs rounded-lg border border-purple-200">En revisión</span>
+                                {% else %}
+                                    <span class="px-2.5 py-1 bg-emerald-50 text-emerald-600 font-bold text-xs rounded-lg border border-emerald-200">Disponible</span>
+                                {% endif %}
+                            </td>
+                            <td class="p-3 text-xs text-gray-500 search-target">{{ libro.ubicacion|default:"Estante General" }}</td>
+                            <td class="p-3 text-right space-x-1">
+                                <a href="{% url 'editar_documento' 'libro' libro.id %}" class="inline-flex items-center gap-1 bg-amber-50 text-amber-700 hover:bg-amber-100 px-3 py-1.5 rounded-xl font-bold text-xs transition">
+                                    <i class="fa-solid fa-pen"></i> Editar
+                                </a>
+                                <a href="{% url 'eliminar_documento' 'libro' libro.id %}" onclick="return confirm('¿Deseas eliminar este libro?');" class="inline-flex items-center gap-1 bg-red-50 text-red-600 hover:bg-red-100 px-3 py-1.5 rounded-xl font-bold text-xs transition">
+                                    <i class="fa-solid fa-trash"></i> Eliminar
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-6 text-gray-400 text-xs">No hay libros subidos.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de Artículos -->
+    <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden transition-all duration-200">
+        <div onclick="toggleSection('sec-articulos', 'icon-articulos')" class="p-6 flex items-center justify-between cursor-pointer hover:bg-gray-50/80 transition select-none">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-base">
+                    <i class="fa-solid fa-newspaper"></i>
+                </div>
+                <div>
+                    <h2 class="font-bold text-gray-800 text-base">Artículos Académicos</h2>
+                    <p class="text-[11px] text-gray-400">Listado de investigaciones e informes subidos (100% digitales)</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-xs bg-emerald-50 text-emerald-700 font-bold px-3 py-1 rounded-full border border-emerald-100">
+                    Total: {{ articulos|length }}
+                </span>
+                <i id="icon-articulos" class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-300"></i>
+            </div>
+        </div>
+
+        <div id="sec-articulos" class="hidden p-6 pt-0 border-t border-gray-100 space-y-4">
+            <div class="relative pt-4">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-7 text-gray-400 text-xs"></i>
+                <input type="text" id="search-articulos" onkeyup="filtrarTabla('search-articulos', 'tabla-articulos')" placeholder="Buscar por título, autor o rol..." class="w-full pl-10 pr-4 py-2.5 bg-gray-50/50 rounded-2xl border border-gray-200 text-xs focus:outline-none focus:border-emerald-500 focus:bg-white transition">
+            </div>
+
+            <div class="overflow-x-auto">
+                <table id="tabla-articulos" class="w-full text-left text-sm text-gray-600">
+                    <thead class="bg-gray-50 text-xs text-gray-400 uppercase font-semibold">
+                        <tr>
+                            <th class="p-3 rounded-l-xl">Portada</th>
+                            <th class="p-3">Título</th>
+                            <th class="p-3">Autor</th>
+                            <th class="p-3">Rol</th>
+                            <th class="p-3 text-right rounded-r-xl">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for articulo in articulos %}
+                        <tr class="hover:bg-gray-50/50 transition row-item">
+                            <td class="p-3">
+                                {% if articulo.portada %}
+                                    <img src="{{ articulo.portada.url }}" class="w-10 h-14 object-cover rounded-xl border border-gray-100 shadow-sm">
+                                {% else %}
+                                    <div class="w-10 h-14 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-[10px] font-bold">Sin foto</div>
+                                {% endif %}
+                            </td>
+                            <td class="p-3 font-semibold text-gray-800 search-target">{{ articulo.titulo }}</td>
+                            <td class="p-3 text-gray-500 search-target">{{ articulo.autor }}</td>
+                            <td class="p-3 search-target">
+                                <span class="px-2.5 py-1 bg-blue-50 text-[#1d82dc] font-bold text-xs rounded-lg">
+                                    {{ articulo.creado_por_rol|default:"Estudiante" }}
+                                </span>
+                            </td>
+                            <td class="p-3 text-right space-x-1">
+                                <a href="{% url 'editar_documento' 'articulo' articulo.id %}" class="inline-flex items-center gap-1 bg-amber-50 text-amber-700 hover:bg-amber-100 px-3 py-1.5 rounded-xl font-bold text-xs transition">
+                                    <i class="fa-solid fa-pen"></i> Editar
+                                </a>
+                                <a href="{% url 'eliminar_documento' 'articulo' articulo.id %}" onclick="return confirm('¿Deseas eliminar este artículo?');" class="inline-flex items-center gap-1 bg-red-50 text-red-600 hover:bg-red-100 px-3 py-1.5 rounded-xl font-bold text-xs transition">
+                                    <i class="fa-solid fa-trash"></i> Eliminar
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-6 text-gray-400 text-xs">No hay artículos subidos.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de Gestión de Usuarios -->
+    <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden transition-all duration-200">
+        <div onclick="toggleSection('sec-usuarios', 'icon-usuarios')" class="p-6 flex items-center justify-between cursor-pointer hover:bg-gray-50/80 transition select-none">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-base">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <div>
+                    <h2 class="font-bold text-gray-800 text-base">Gestión de Usuarios</h2>
+                    <p class="text-[11px] text-gray-400">Control de perfiles, permisos y accesos al sistema</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-xs bg-purple-50 text-purple-700 font-bold px-3 py-1 rounded-full border border-purple-100">
+                    Total: {{ usuarios|length }}
+                </span>
+                <i id="icon-usuarios" class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-300"></i>
+            </div>
+        </div>
+
+        <div id="sec-usuarios" class="hidden p-6 pt-0 border-t border-gray-100 space-y-4">
+            <div class="relative pt-4">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-7 text-gray-400 text-xs"></i>
+                <input type="text" id="search-usuarios" onkeyup="filtrarTabla('search-usuarios', 'tabla-usuarios')" placeholder="Buscar por usuario, correo o rol..." class="w-full pl-10 pr-4 py-2.5 bg-gray-50/50 rounded-2xl border border-gray-200 text-xs focus:outline-none focus:border-purple-500 focus:bg-white transition">
+            </div>
+
+            <div class="overflow-x-auto">
+                <table id="tabla-usuarios" class="w-full text-left text-sm text-gray-600">
+                    <thead class="bg-gray-50 text-xs text-gray-400 uppercase font-semibold">
+                        <tr>
+                            <th class="p-3 rounded-l-xl">Usuario</th>
+                            <th class="p-3">Correo Electrónico</th>
+                            <th class="p-3">Rol / Estado</th>
+                            <th class="p-3 text-right rounded-r-xl">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for usr in usuarios %}
+                        {% with rol_actual=usr.cuenta.rol|default:"Estudiante" %}
+                        <tr class="hover:bg-gray-50/50 transition row-item">
+                            <td class="p-3 font-semibold text-gray-800 flex items-center gap-3 search-target">
+                                <div class="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs border
+                                    {% if rol_actual == 'Profesor' %} bg-blue-50 text-blue-600 border-blue-100
+                                    {% elif rol_actual == 'Administrador' %} bg-purple-50 text-purple-600 border-purple-100
+                                    {% elif rol_actual == 'Estudiante' %} bg-emerald-50 text-emerald-600 border-emerald-100
+                                    {% else %} bg-gray-100 text-gray-600 border-gray-200 {% endif %}">
+                                    <i class="fa-solid fa-user"></i>
+                                </div>
+                                {{ usr.username }}
+                            </td>
+                            <td class="p-3 text-gray-500 search-target">
+                                {{ usr.email|default:"Sin correo" }}
+                            </td>
+                            <td class="p-3 search-target space-x-1">
+                                {% if rol_actual == 'Profesor' %}
+                                    <span class="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200 font-bold text-xs rounded-lg">
+                                        Profesor
+                                    </span>
+                                {% elif rol_actual == 'Administrador' %}
+                                    <span class="px-2.5 py-1 bg-purple-50 text-purple-700 border border-purple-200 font-bold text-xs rounded-lg">
+                                        Administrador
+                                    </span>
+                                {% elif rol_actual == 'Estudiante' %}
+                                    <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-xs rounded-lg">
+                                        Estudiante
+                                    </span>
+                                {% else %}
+                                    <span class="px-2.5 py-1 bg-gray-100 text-gray-700 border border-gray-200 font-bold text-xs rounded-lg">
+                                        {{ rol_actual }}
+                                    </span>
+                                {% endif %}
+
+                                {% if usr.cuenta.vetado %}
+                                    <span class="px-2 py-0.5 bg-red-100 text-red-700 font-bold text-[10px] rounded-md border border-red-200">
+                                        VETADO
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="p-3 text-right space-x-1">
+                                {% if usr.cuenta.vetado %}
+                                    <a href="{% url 'desvetar_usuario' usr.cuenta.id|default:usr.id %}" onclick="return confirm('¿Desvetar a este usuario?');" class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 px-2.5 py-1.5 rounded-xl font-bold text-xs transition">
+                                        <i class="fa-solid fa-unlock"></i> Desvetar
+                                    </a>
+                                {% endif %}
+                                <a href="{% url 'editar_cuenta' usr.cuenta.id|default:usr.id %}" class="inline-flex items-center gap-1 bg-amber-50 text-amber-700 hover:bg-amber-100 px-3 py-1.5 rounded-xl font-bold text-xs transition">
+                                    <i class="fa-solid fa-user-pen"></i> Editar
+                                </a>
+                                <a href="{% url 'eliminar_cuenta' usr.cuenta.id|default:usr.id %}" onclick="return confirm('¿Deseas eliminar esta cuenta de usuario?');" class="inline-flex items-center gap-1 bg-red-50 text-red-600 hover:bg-red-100 px-3 py-1.5 rounded-xl font-bold text-xs transition">
+                                    <i class="fa-solid fa-trash"></i> Eliminar
+                                </a>
+                            </td>
+                        </tr>
+                        {% endwith %}
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-6 text-gray-400 text-xs">No hay usuarios registrados.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTÓN PARA IR A ADMINISTRACIÓN REAL (DJANGO ADMIN) -->
+    <div class="flex justify-end pt-4 pb-6">
+        <a href="http://127.0.0.1:8000/admin/principal/" target="_blank" class="inline-flex items-center gap-2 px-5 py-3 bg-gray-900 hover:bg-black text-white font-bold text-xs rounded-2xl shadow-md transition transform active:scale-95">
+            <i class="fa-solid fa-gears text-amber-400 text-sm"></i> Ir a Administración Completa
+        </a>
+    </div>
+</div>
+
+<script>
+    function toggleSection(secId, iconId) {
+        const sec = document.getElementById(secId);
+        const icon = document.getElementById(iconId);
+        sec.classList.toggle('hidden');
+        icon.classList.toggle('rotate-180');
+    }
+
+    function filtrarTabla(inputId, tablaId) {
+        const input = document.getElementById(inputId);
+        const filter = input.value.toLowerCase();
+        const rows = document.querySelectorAll(`#${tablaId} .row-item`);
+
+        rows.forEach(row => {
+            const targets = row.querySelectorAll('.search-target');
+            let match = false;
+            targets.forEach(target => {
+                if (target.textContent.toLowerCase().includes(filter)) {
+                    match = true;
+                }
+            });
+            row.style.display = match ? '' : 'none';
+        });
+    }
+
+    let elementosMapa = [];
+    let elementoSeleccionadoId = null;
+
+    const mapaPorDefecto = [
+        { id: 1, tipo: 'estante', nombre: 'Estante 1', x: 5, y: 10, w: 22, h: 12 },
+        { id: 2, tipo: 'estante', nombre: 'Estante 2', x: 5, y: 35, w: 22, h: 12 },
+        { id: 3, tipo: 'estante', nombre: 'Estante 3', x: 5, y: 70, w: 22, h: 12 },
+        { id: 4, tipo: 'estante', nombre: 'Estante 4', x: 73, y: 10, w: 22, h: 12 },
+        { id: 5, tipo: 'estante', nombre: 'Estante 5', x: 73, y: 35, w: 22, h: 12 },
+        { id: 6, tipo: 'estante', nombre: 'Estante 6', x: 73, y: 70, w: 22, h: 12 },
+        { id: 7, tipo: 'pasillo', nombre: 'Muro A', x: 35, y: 0, w: 2, h: 80 },
+        { id: 8, tipo: 'pasillo', nombre: 'Muro B', x: 63, y: 20, w: 2, h: 80 },
+        { id: 9, tipo: 'entrada', nombre: 'ENTRADA PRINCIPAL', x: 38, y: 88, w: 24, h: 10 }
+    ];
+
+    async function cargarMapaAdmin() {
+        try {
+            const response = await fetch("{% url 'obtener_mapa_api' %}");
+            const data = await response.json();
+            if (data.elementos && data.elementos.length > 0) {
+                elementosMapa = data.elementos;
+            } else {
+                elementosMapa = [...mapaPorDefecto];
+            }
+        } catch (e) {
+            elementosMapa = [...mapaPorDefecto];
+        }
+        renderizarMapaAdmin();
+    }
+
+    function renderizarMapaAdmin() {
+        const lienzo = document.getElementById('lienzoMapaAdmin');
+        if (!lienzo) return;
+        
+        lienzo.querySelectorAll('.map-item').forEach(el => el.remove());
+
+        elementosMapa.forEach(item => {
+            const div = document.createElement('div');
+            let estiloClase = 'bg-gray-400 opacity-60 text-white';
+            
+            if (item.tipo === 'estante') {
+                estiloClase = 'bg-amber-200 border border-amber-400 text-amber-900 shadow-sm';
+            } else if (item.tipo === 'entrada') {
+                estiloClase = 'bg-amber-200/90 border border-amber-400 text-amber-900 font-extrabold shadow-sm';
+            }
+
+            div.className = `map-item absolute rounded flex items-center justify-center text-[10px] font-bold cursor-pointer transition-all ${estiloClase} ${
+                item.id === elementoSeleccionadoId ? 'ring-2 ring-blue-500 ring-offset-1' : ''
+            }`;
+            
+            div.style.left = item.x + '%';
+            div.style.top = item.y + '%';
+            div.style.width = item.w + '%';
+            div.style.height = item.h + '%';
+            div.textContent = item.nombre;
+
+            div.onclick = (e) => {
+                e.stopPropagation();
+                seleccionarElemento(item.id);
+            };
+
+            lienzo.appendChild(div);
+        });
+    }
+
+    function seleccionarElemento(id) {
+        elementoSeleccionadoId = id;
+        const item = elementosMapa.find(e => e.id === id);
+        
+        if (item) {
+            document.getElementById('panelVacio').classList.add('hidden');
+            document.getElementById('panelEdicion').classList.remove('hidden');
+
+            document.getElementById('propNombre').value = item.nombre;
+            document.getElementById('propAncho').value = item.w;
+            document.getElementById('propAlto').value = item.h;
+            document.getElementById('propX').value = item.x;
+            document.getElementById('propY').value = item.y;
+        }
+        renderizarMapaAdmin();
+    }
+
+    function actualizarElementoSeleccionado() {
+        if (!elementoSeleccionadoId) return;
+        const item = elementosMapa.find(e => e.id === elementoSeleccionadoId);
+        if (item) {
+            item.nombre = document.getElementById('propNombre').value;
+            item.w = parseFloat(document.getElementById('propAncho').value) || 10;
+            item.h = parseFloat(document.getElementById('propAlto').value) || 10;
+            item.x = parseFloat(document.getElementById('propX').value) || 0;
+            item.y = parseFloat(document.getElementById('propY').value) || 0;
+            renderizarMapaAdmin();
+        }
+    }
+
+    function crearElemento(tipo) {
+        const nuevoId = Date.now();
+        let nombreDefault = 'Muro / Pasillo';
+        let ancho = 3;
+        let alto = 40;
+
+        if (tipo === 'estante') {
+            nombreDefault = 'Nuevo Estante';
+            ancho = 20;
+            alto = 12;
+        } else if (tipo === 'entrada') {
+            nombreDefault = 'ENTRADA PRINCIPAL';
+            ancho = 24;
+            alto = 10;
+        }
+
+        const nuevo = {
+            id: nuevoId,
+            tipo: tipo,
+            nombre: nombreDefault,
+            x: 40,
+            y: 40,
+            w: ancho,
+            h: alto
+        };
+        elementosMapa.push(nuevo);
+        seleccionarElemento(nuevoId);
+    }
+
+    function eliminarElementoSeleccionado() {
+        if (!elementoSeleccionadoId) return;
+        elementosMapa = elementosMapa.filter(e => e.id !== elementoSeleccionadoId);
+        elementoSeleccionadoId = null;
+        document.getElementById('panelEdicion').classList.add('hidden');
+        document.getElementById('panelVacio').classList.remove('hidden');
+        renderizarMapaAdmin();
+    }
+
+    async function guardarMapa() {
+        try {
+            const response = await fetch("{% url 'guardar_mapa_api' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ elementos: elementosMapa })
+            });
+
+            const res = await response.json();
+            if (res.status === 'exito') {
+                alert('¡Configuración del mapa guardada exitosamente en la Base de Datos!');
+            } else {
+                alert('Error al guardar: ' + (res.mensaje || 'Permiso denegado'));
+            }
+        } catch (e) {
+            alert('Error al intentar guardar el mapa.');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        cargarMapaAdmin();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+
+{% block title %}Mis Libros Prestados - Biblioteca CSR{% endblock %}
+
+{% block content %}
+<div class="space-y-6 max-w-6xl mx-auto">
+    <!-- Encabezado de la Sección -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-blue-50 text-[#1d82dc] rounded-2xl flex items-center justify-center text-2xl font-bold shrink-0">
+                <i class="fa-solid fa-bookmark"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-gray-800">Mis Libros Prestados</h1>
+                <p class="text-xs text-gray-500">Administración de solicitudes activas y lectura digital</p>
+            </div>
+        </div>
+        <span class="text-xs bg-blue-50 text-[#1d82dc] font-bold px-4 py-2 rounded-full border border-blue-100 self-start sm:self-auto">
+            <i class="fa-solid fa-book-bookmark mr-1"></i> Libros activos: {{ prestamos|length }}/2
+        </span>
+    </div>
+
+    <!-- Rejilla de Libros Prestados -->
+    <main class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for prestamo in prestamos %}
+        <div class="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm flex flex-col justify-between space-y-4 hover:shadow-md transition">
+            
+            <div class="space-y-3">
+                <div class="flex gap-4">
+                    {% if prestamo.libro.portada %}
+                        <img src="{{ prestamo.libro.portada.url }}" class="w-20 h-28 object-cover rounded-2xl border border-gray-100 shadow-xs shrink-0" alt="{{ prestamo.libro.titulo }}">
+                    {% else %}
+                        <div class="w-20 h-28 bg-gradient-to-br from-blue-50 to-indigo-50 text-[#1d82dc] rounded-2xl flex flex-col items-center justify-center text-xs font-bold shrink-0 border border-blue-100 p-2 text-center">
+                            <i class="fa-solid fa-book text-xl mb-1"></i>
+                            <span class="text-[10px]">Sin Portada</span>
+                        </div>
+                    {% endif %}
+
+                    <div class="space-y-1.5 flex-1 min-w-0">
+                        <!-- Badges de Estado -->
+                        {% if prestamo.estado == 'Prestado' or prestamo.libro.estado == 'Prestado' %}
+                            <span class="inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                <i class="fa-solid fa-check text-[9px]"></i> PRESTADO
+                            </span>
+                        {% elif prestamo.estado == 'En devolucion' or prestamo.libro.estado == 'En devolucion' %}
+                            <span class="inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200 animate-pulse">
+                                <i class="fa-solid fa-triangle-exclamation text-[9px]"></i> EN DEVOLUCIÓN
+                            </span>
+                        {% elif prestamo.estado == 'En revision' or prestamo.estado == 'En revisión' %}
+                            <span class="inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200">
+                                <i class="fa-solid fa-clock text-[9px]"></i> EN REVISIÓN
+                            </span>
+                        {% else %}
+                            <span class="inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                                {{ prestamo.estado|upper }}
+                            </span>
+                        {% endif %}
+
+                        <h3 class="font-bold text-gray-800 text-sm leading-snug line-clamp-2" title="{{ prestamo.libro.titulo }}">
+                            {{ prestamo.libro.titulo }}
+                        </h3>
+                        <p class="text-xs text-gray-500 font-medium truncate">{{ prestamo.libro.autor }}</p>
+                        
+                        <p class="text-[11px] text-gray-600 bg-gray-50 px-2 py-1 rounded-xl border border-gray-100 inline-block">
+                            📍 {{ prestamo.libro.ubicacion|default:"Estante General" }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Caja Informativa de Límite -->
+                {% if prestamo.estado == 'En devolucion' %}
+                <div class="bg-rose-50 border border-rose-200 rounded-2xl p-3 text-rose-700 text-xs space-y-1">
+                    <p class="font-bold flex items-center gap-1.5">
+                        <i class="fa-solid fa-triangle-exclamation text-rose-600"></i> Estado: En devolución
+                    </p>
+                    <p class="text-[11px] text-rose-600">
+                        El tiempo límite ha expirado. Entrega el libro en la biblioteca.
+                    </p>
+                </div>
+                {% elif prestamo.fecha_vencimiento %}
+                <div class="bg-blue-50 border border-blue-100 rounded-2xl p-2.5 text-xs text-gray-600 flex items-center justify-between">
+                    <span><i class="fa-solid fa-calendar-day text-[#1d82dc] mr-1"></i> Límite actual:</span>
+                    <strong class="text-gray-800">{{ prestamo.fecha_vencimiento|date:"d/m/Y H:i" }}</strong>
+                </div>
+                {% endif %}
+
+                <!-- Acordeón Descripción -->
+                <details class="group border-t border-gray-100 pt-2 text-xs">
+                    <summary class="flex items-center justify-between cursor-pointer font-semibold text-[#1d82dc] select-none py-1">
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-align-left text-xs"></i> Ver Descripción</span>
+                        <i class="fa-solid fa-chevron-down text-[10px] group-open:rotate-180 transition-transform"></i>
+                    </summary>
+                    <p class="mt-2 text-gray-600 bg-gray-50 p-3 rounded-2xl border border-gray-100 text-[11px] leading-relaxed">
+                        {{ prestamo.libro.descripcion|default:"Sin descripción registrada." }}
+                    </p>
+                </details>
+
+                <!-- Previsualización PDF -->
+                {% if prestamo.libro.archivo %}
+                <div class="border-t border-gray-100 pt-3 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-gray-600 flex items-center gap-1">
+                            <i class="fa-solid fa-file-pdf text-red-500"></i> Lectura Digital
+                        </span>
+                        <button type="button" 
+                                onclick="abrirVistaPreviaModal('{{ prestamo.libro.archivo.url }}', '{{ prestamo.libro.titulo|escapejs }}')"
+                                class="text-[11px] font-bold text-[#1d82dc] hover:text-blue-700 flex items-center gap-1 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100 transition shadow-xs active:scale-95">
+                            <i class="fa-solid fa-expand"></i> Pantalla completa
+                        </button>
+                    </div>
+                    <iframe src="{{ prestamo.libro.archivo.url }}" title="Vista previa de lectura" class="w-full h-44 rounded-2xl border border-gray-200 shadow-inner bg-gray-50"></iframe>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full bg-white rounded-3xl p-12 text-center border border-gray-100 shadow-sm space-y-4 my-6">
+            <div class="w-16 h-16 bg-blue-50 text-[#1d82dc] rounded-2xl flex items-center justify-center text-3xl mx-auto shadow-inner">
+                <i class="fa-solid fa-bookmark"></i>
+            </div>
+            <div class="space-y-1">
+                <h3 class="text-lg font-bold text-gray-800">Aún no tienes libros prestados</h3>
+                <p class="text-xs text-gray-500 max-w-sm mx-auto">
+                    Explora la colección del catálogo principal y solicita hasta 2 libros para tu lectura.
+                </p>
+            </div>
+            <a href="{% url 'inicio' %}" class="inline-flex items-center gap-2 bg-[#1d82dc] hover:bg-blue-600 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-sm transition active:scale-95">
+                <i class="fa-solid fa-book-open"></i> Explorar Catálogo
+            </a>
+        </div>
+        {% endfor %}
+    </main>
+</div>
+
+<!-- MODAL VISTA PREVIA PDF -->
+<div id="modal-vista-previa-guardados" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 transition-opacity">
+    <div class="bg-white rounded-3xl max-w-5xl w-full h-[85vh] p-6 shadow-2xl border border-gray-100 flex flex-col space-y-4 relative overflow-hidden">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+            <div class="flex items-center gap-3 truncate">
+                <div class="w-10 h-10 bg-blue-50 text-[#1d82dc] rounded-xl flex items-center justify-center text-lg shrink-0">
+                    <i class="fa-solid fa-file-pdf"></i>
+                </div>
+                <div class="truncate">
+                    <h2 id="titulo-modal-guardados" class="font-bold text-gray-800 text-base truncate">Vista Previa del Libro</h2>
+                    <p class="text-xs text-gray-400">Lector digital interactivo</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <a id="btn-pestana-guardados" href="#" target="_blank" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-xs transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir aparte
+                </a>
+                <button onclick="cerrarVistaPreviaModal()" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+        <div class="flex-1 w-full h-full bg-gray-50 rounded-2xl overflow-hidden border border-gray-200">
+            <iframe id="iframe-modal-guardados" src="" title="Lector PDF" class="w-full h-full rounded-2xl"></iframe>
+        </div>
+    </div>
+</div>
+
+<script>
+    function abrirVistaPreviaModal(url, titulo) {
+        const modal = document.getElementById('modal-vista-previa-guardados');
+        const iframe = document.getElementById('iframe-modal-guardados');
+        const tituloEl = document.getElementById('titulo-modal-guardados');
+        const btnPestana = document.getElementById('btn-pestana-guardados');
+
+        if (iframe) iframe.src = url;
+        if (tituloEl) tituloEl.textContent = titulo || 'Vista Previa del Libro';
+        if (btnPestana) btnPestana.href = url;
+
+        if (modal) modal.classList.remove('hidden');
+    }
+
+    function cerrarVistaPreviaModal() {
+        const modal = document.getElementById('modal-vista-previa-guardados');
+        const iframe = document.getElementById('iframe-modal-guardados');
+        if (modal) modal.classList.add('hidden');
+        if (iframe) iframe.src = '';
+    }
+</script>
+{% endblock %}

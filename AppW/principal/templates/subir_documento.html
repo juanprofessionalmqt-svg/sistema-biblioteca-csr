@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+
+{% block content %}
+{% if request.user.cuenta.rol == 'Externo' %}
+<!-- VISTA DE ACCESO DENEGADO PARA USUARIOS EXTERNOS -->
+<div class="max-w-2xl mx-auto bg-white p-8 rounded-3xl border border-gray-100 shadow-sm text-center space-y-6 my-10">
+    <div class="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center text-3xl font-bold mx-auto">
+        <i class="fa-solid fa-user-lock"></i>
+    </div>
+    
+    <div class="space-y-2">
+        <h1 class="text-2xl font-bold text-gray-800">Acceso Denegado</h1>
+        <p class="text-sm text-gray-500 max-w-md mx-auto">
+            Tu cuenta actualmente está registrada con el rol de <span class="font-semibold text-gray-700">Externo</span>. No tienes permisos para publicar libros ni artículos académicos en la plataforma.
+        </p>
+    </div>
+
+    <div class="pt-2">
+        <a href="{% url 'inicio' %}" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-bold text-white bg-[#1d82dc] hover:bg-blue-600 transition shadow-sm">
+            <i class="fa-solid fa-house"></i> Volver al Inicio
+        </a>
+    </div>
+</div>
+
+{% else %}
+<!-- FORMULARIO DE PUBLICACIÓN PARA USUARIOS PERMITIDOS -->
+<div class="max-w-3xl mx-auto bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-6">
+    <div class="flex items-center gap-4 border-b border-gray-100 pb-4">
+        <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-xl font-bold">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+        </div>
+        <div>
+            <h1 class="text-xl font-bold text-gray-800">Publicar Nuevo Documento</h1>
+            <p class="text-xs text-gray-500">Agrega libros físicos/digitales o artículos científicos al sistema</p>
+        </div>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" class="space-y-5">
+        {% csrf_token %}
+
+        <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Tipo de Publicación</label>
+            <select name="tipo_documento" id="tipoDocumento" onchange="toggleCamposLibro()" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500">
+                {% if request.user.cuenta.rol == 'Administrador' %}
+                    <option value="libro" selected>Libro (Físico / Digital)</option>
+                    <option value="articulo">Artículo / Documento Digital</option>
+                {% else %}
+                    <option value="articulo" selected>Artículo / Documento Digital</option>
+                {% endif %}
+            </select>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1">Título</label>
+                <input type="text" name="titulo" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1">Autor(es)</label>
+                <input type="text" name="autor" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500">
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Descripción / Resumen</label>
+            <textarea name="descripcion" rows="3" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm focus:outline-none focus:border-emerald-500"></textarea>
+        </div>
+
+        <!-- SECCIÓN EXCLUSIVA DE LIBROS -->
+        <div id="seccionLibro" class="space-y-4 pt-2">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-2xl border border-gray-200">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Estado</label>
+                    <select name="estado" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500">
+                        <option value="Disponible">Disponible</option>
+                        <option value="Prestado">Prestado</option>
+                        <option value="En progreso">En progreso</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Ubicación Escrita</label>
+                    <input type="text" name="ubicacion" placeholder="Ej: Estante 2 - Nivel A" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500">
+                </div>
+            </div>
+
+            <!-- MAPA PARA SELECCIÓN DE COORDENADAS -->
+            <div class="space-y-2">
+                <label class="block text-xs font-semibold text-gray-700">Selecciona el punto exacto en la Biblioteca:</label>
+                
+                <div id="contenedorMapaSubir" class="relative w-full h-64 bg-amber-50/50 border-2 border-dashed border-amber-300 rounded-2xl overflow-hidden cursor-crosshair select-none">
+                    <div class="absolute inset-0 border-4 border-amber-800/20 pointer-events-none"></div>
+
+                    <!-- PIN DE POSICIÓN -->
+                    <div id="pinMapaSubir" class="absolute w-6 h-6 -ml-3 -mt-3 bg-red-600 text-white rounded-full flex items-center justify-center text-xs shadow-lg font-bold transition-all duration-150 pointer-events-none z-20" style="left: 50%; top: 50%;"></div>
+                </div>
+
+                <input type="hidden" name="posicion_x" id="posicion_x_subir" value="50">
+                <input type="hidden" name="posicion_y" id="posicion_y_subir" value="50">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+            <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1">Imagen de Portada (Opcional)</label>
+                <input type="file" name="portada" accept="image/*" class="block w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-gray-100 file:text-gray-700">
+            </div>
+            <div>
+                <label id="labelArchivoPdf" class="block text-xs font-semibold text-gray-700 mb-1">Archivo Documento (PDF - Opcional para Libros)</label>
+                <input type="file" name="archivo_pdf" id="archivoPdf" accept=".pdf" class="block w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-600">
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-4 border-t border-gray-100">
+            <a href="{% url 'inicio' %}" class="px-5 py-2.5 rounded-xl text-xs font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 transition">Cancelar</a>
+            <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition shadow-sm">Publicar</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    function toggleCamposLibro() {
+        const tipoSelect = document.getElementById('tipoDocumento');
+        const seccionLibro = document.getElementById('seccionLibro');
+        const archivoPdf = document.getElementById('archivoPdf');
+        const labelArchivoPdf = document.getElementById('labelArchivoPdf');
+
+        if (tipoSelect && seccionLibro) {
+            const esLibro = (tipoSelect.value === 'libro');
+            seccionLibro.style.display = esLibro ? 'block' : 'none';
+
+            if (archivoPdf && labelArchivoPdf) {
+                if (esLibro) {
+                    archivoPdf.removeAttribute('required');
+                    labelArchivoPdf.textContent = 'Archivo Documento (PDF - Opcional para Libros)';
+                } else {
+                    archivoPdf.setAttribute('required', 'required');
+                    labelArchivoPdf.textContent = 'Archivo Documento (PDF - Requerido)';
+                }
+            }
+        }
+    }
+
+    async function cargarMapaSubir() {
+        const contenedor = document.getElementById('contenedorMapaSubir');
+        if (!contenedor) return;
+
+        let elementosGuardados = [];
+        try {
+            const response = await fetch("{% url 'obtener_mapa_api' %}");
+            const data = await response.json();
+            elementosGuardados = data.elementos || [];
+        } catch (e) {
+            console.error('Error al obtener plano:', e);
+        }
+
+        elementosGuardados.forEach(item => {
+            const div = document.createElement('div');
+            div.className = `absolute rounded flex items-center justify-center text-[10px] font-bold pointer-events-none ${
+                item.tipo === 'estante' 
+                    ? 'bg-amber-200 border border-amber-400 text-amber-900 shadow-sm' 
+                    : 'bg-gray-400 opacity-60 text-white'
+            }`;
+            div.style.left = item.x + '%';
+            div.style.top = item.y + '%';
+            div.style.width = item.w + '%';
+            div.style.height = item.h + '%';
+            div.textContent = item.nombre;
+            contenedor.appendChild(div);
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        toggleCamposLibro();
+        cargarMapaSubir();
+
+        const mapa = document.getElementById('contenedorMapaSubir');
+        const pin = document.getElementById('pinMapaSubir');
+        const inputX = document.getElementById('posicion_x_subir');
+        const inputY = document.getElementById('posicion_y_subir');
+
+        if (mapa) {
+            mapa.addEventListener('click', (e) => {
+                const rect = mapa.getBoundingClientRect();
+                const posX = Math.round(((e.clientX - rect.left) / rect.width) * 100);
+                const posY = Math.round(((e.clientY - rect.top) / rect.height) * 100);
+
+                pin.style.left = posX + '%';
+                pin.style.top = posY + '%';
+
+                inputX.value = posX;
+                inputY.value = posY;
+            });
+        }
+    });
+</script>
+{% endif %}
+{% endblock %}

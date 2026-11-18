@@ -1,0 +1,495 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Encabezado y Selector de pestañas -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex items-center bg-[#e9eff4] p-1.5 rounded-full w-fit gap-1 shadow-inner border border-gray-200/50">
+            <a href="?tipo=libros{% if query %}&q={{ query }}{% endif %}" 
+               class="px-6 py-2.5 rounded-full font-semibold text-sm transition flex items-center gap-2 {% if tipo_activo == 'libros' %}bg-[#1d82dc] text-white shadow-md{% else %}text-gray-600 hover:text-gray-900{% endif %}">
+                <i class="fa-solid fa-book"></i> Libros
+            </a>
+            <a href="?tipo=articulos{% if query %}&q={{ query }}{% endif %}" 
+               class="px-6 py-2.5 rounded-full font-semibold text-sm transition flex items-center gap-2 {% if tipo_activo == 'articulos' %}bg-[#1d82dc] text-white shadow-md{% else %}text-gray-600 hover:text-gray-900{% endif %}">
+                <i class="fa-solid fa-newspaper"></i> Artículos
+            </a>
+        </div>
+
+        {% if user.is_authenticated and tipo_activo == 'libros' %}
+        <div class="flex items-center gap-3">
+            <a href="{% url 'guardados' %}" 
+               title="Ver mis libros prestados"
+               class="text-xs font-semibold text-gray-600 bg-white hover:bg-blue-50/80 hover:text-[#1d82dc] px-4 py-2 rounded-full border border-gray-200 shadow-sm transition flex items-center gap-1.5 cursor-pointer active:scale-95">
+                <i class="fa-solid fa-bookmark text-[#1d82dc]"></i> Mis préstamos: 
+                <strong class="text-gray-800">{{ prestamos_activos_count|default:0 }}/2</strong>
+            </a>
+
+            <button onclick="toggleMapaModal()" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-full font-bold text-xs shadow-md transition transform hover:-translate-y-0.5">
+                <i class="fa-solid fa-map-location-dot text-sm"></i> Ver Plano Biblioteca
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- SECCIÓN DE LIBROS -->
+    {% if tipo_activo == 'libros' %}
+        {% if rol_actual == 'Externo' %}
+            <div class="max-w-2xl mx-auto bg-white p-8 rounded-3xl border border-gray-100 shadow-sm text-center space-y-6 my-10">
+                <div class="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center text-3xl font-bold mx-auto">
+                    <i class="fa-solid fa-user-lock"></i>
+                </div>
+                
+                <div class="space-y-2">
+                    <h1 class="text-2xl font-bold text-gray-800">Acceso Denegado</h1>
+                    <p class="text-sm text-gray-500 max-w-md mx-auto">
+                        Tu cuenta tiene el rol de <span class="font-semibold text-gray-700">Externo</span>. No tienes permisos para consultar la colección de libros.
+                    </p>
+                </div>
+            </div>
+
+        {% elif libros %}
+            <div class="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-6 space-y-6">
+                {% for libro in libros %}
+                <div class="break-inside-avoid mb-6 w-full bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden p-4 hover:shadow-md transition relative">
+                    <div>
+                        {% if libro.portada %}
+                            <div class="w-full rounded-2xl overflow-hidden mb-3 border border-gray-100 relative bg-gray-50">
+                                <img src="{{ libro.portada.url }}" class="w-full h-auto object-cover rounded-2xl" alt="{{ libro.titulo }}">
+                                <div class="absolute top-2 right-2 flex flex-col items-end gap-1">
+                                    {% if libro.estado == 'Prestado' %}
+                                        <span class="px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-600 text-white shadow">PRESTADO (5 DÍAS)</span>
+                                    {% elif libro.estado == 'En devolucion' %}
+                                        <span class="px-2.5 py-1 rounded-full text-[10px] font-black bg-rose-600 text-white shadow">EN DEVOLUCIÓN</span>
+                                    {% elif libro.estado == 'Disponible' %}
+                                        <span class="px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-500 text-white shadow">DISPONIBLE</span>
+                                    {% elif libro.estado == 'En progreso' %}
+                                        <span class="px-2.5 py-1 rounded-full text-[10px] font-black bg-blue-500 text-white shadow">EN PROGRESO</span>
+                                    {% else %}
+                                        <span class="px-2.5 py-1 rounded-full text-[10px] font-black bg-purple-500 text-white shadow">{{ libro.estado|upper }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="w-full rounded-2xl overflow-hidden mb-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100/60 flex items-center justify-between">
+                                <div class="flex items-center gap-2 text-[#1d82dc]">
+                                    <i class="fa-solid fa-book text-base"></i>
+                                    <span class="text-[10px] font-bold uppercase tracking-wide">Libro Digital</span>
+                                </div>
+                                {% if libro.estado == 'Prestado' %}
+                                    <span class="px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-600 text-white shadow">PRESTADO</span>
+                                {% elif libro.estado == 'En devolucion' %}
+                                    <span class="px-2 py-0.5 rounded-full text-[9px] font-black bg-rose-600 text-white shadow">EN DEVOLUCIÓN</span>
+                                {% elif libro.estado == 'Disponible' %}
+                                    <span class="px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-500 text-white shadow">DISPONIBLE</span>
+                                {% else %}
+                                    <span class="px-2 py-0.5 rounded-full text-[9px] font-black bg-purple-500 text-white shadow">{{ libro.estado|upper }}</span>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+
+                        <h3 class="font-bold text-gray-800 text-base leading-snug">{{ libro.titulo }}</h3>
+                        <p class="text-xs text-gray-500 mt-1">Autor: <span class="font-medium text-gray-700">{{ libro.autor }}</span></p>
+
+                        <div class="mt-2.5 flex items-center justify-between text-xs text-gray-600 bg-gray-50 p-2 rounded-xl border border-gray-100">
+                            <div class="flex items-center gap-1.5 truncate">
+                                <i class="fa-solid fa-location-dot text-[#1d82dc]"></i>
+                                <span class="font-medium truncate">{{ libro.ubicacion|default:"Estante General" }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 space-y-2">
+                        <button type="button" 
+                                onclick="seleccionarYMostrarDocumento(this, true)"
+                                data-id="{{ libro.id }}"
+                                data-titulo="{{ libro.titulo }}"
+                                data-autor="{{ libro.autor }}"
+                                data-ubicacion="{{ libro.ubicacion|default:'Estante General' }}"
+                                data-estado="{{ libro.estado|default:'Disponible' }}"
+                                data-x="{{ libro.posicion_x|default:50 }}"
+                                data-y="{{ libro.posicion_y|default:50 }}"
+                                data-prestamo-url="{% url 'solicitar_prestamo' libro.id %}"
+                                class="w-full inline-flex items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 py-2 px-3 rounded-xl font-bold text-xs border border-emerald-200/60 transition shadow-sm active:scale-95">
+                            <i class="fa-solid fa-map-pin"></i> Ver Ubicación en Plano
+                        </button>
+
+                        {% if libro.estado == 'Disponible' %}
+                            {% if prestamos_activos_count and prestamos_activos_count >= 2 %}
+                                <button disabled class="w-full bg-gray-100 text-gray-400 py-2 px-3 rounded-xl font-bold text-xs border border-gray-200 cursor-not-allowed">
+                                    Límite Alcanzado (2/2)
+                                </button>
+                            {% else %}
+                                <form action="{% url 'solicitar_prestamo' libro.id %}" method="POST">
+                                    {% csrf_token %}
+                                    <button type="submit" class="w-full bg-[#1d82dc] hover:bg-blue-600 text-white py-2 px-3 rounded-xl font-bold text-xs shadow transition active:scale-95 flex items-center justify-center gap-1.5">
+                                        <i class="fa-solid fa-hand-holding-hand"></i> Pedir Prestado (5 Días)
+                                    </button>
+                                </form>
+                            {% endif %}
+                        {% elif libro.estado == 'Prestado' %}
+                            <button disabled class="w-full bg-amber-50 text-amber-600 py-2 px-3 rounded-xl font-bold text-xs border border-amber-200 cursor-not-allowed">
+                                En Préstamo (5 días)
+                            </button>
+                        {% elif libro.estado == 'En devolucion' %}
+                            <button disabled class="w-full bg-rose-50 text-rose-600 py-2 px-3 rounded-xl font-bold text-xs border border-rose-200 cursor-not-allowed">
+                                En Devolución (Vencido)
+                            </button>
+                        {% else %}
+                            <button disabled class="w-full bg-purple-50 text-purple-600 py-2 px-3 rounded-xl font-bold text-xs border border-purple-200 cursor-not-allowed">
+                                No Disponible ({{ libro.estado }})
+                            </button>
+                        {% endif %}
+
+                        <details class="group border-t border-gray-100 pt-3 text-xs">
+                            <summary class="flex items-center justify-between cursor-pointer font-semibold text-[#1d82dc] select-none">
+                                <span class="flex items-center gap-1.5"><i class="fa-solid fa-align-left text-xs"></i> Descripción</span>
+                                <i class="fa-solid fa-chevron-down text-[10px] group-open:rotate-180 transition-transform"></i>
+                            </summary>
+                            <p class="mt-2 text-gray-600 bg-gray-50 p-3 rounded-2xl border border-gray-100 text-[11px]">
+                                {{ libro.descripcion|default:"Sin descripción disponible." }}
+                            </p>
+                        </details>
+
+                        {% if libro.archivo %}
+                        <div class="mt-3 border-t border-gray-100 pt-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <p class="text-xs font-semibold text-gray-500 flex items-center gap-1">
+                                    <i class="fa-solid fa-eye text-[#1d82dc]"></i> Vista previa:
+                                </p>
+                                <button type="button" 
+                                        onclick="abrirVistaPreviaModal('{{ libro.archivo.url }}', '{{ libro.titulo|escapejs }}')"
+                                        class="text-[11px] font-bold text-[#1d82dc] hover:text-blue-700 flex items-center gap-1 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100 transition shadow-xs active:scale-95">
+                                    <i class="fa-solid fa-expand"></i> Abrir vista previa
+                                </button>
+                            </div>
+                            <iframe src="{{ libro.archivo.url }}" title="Vista previa de {{ libro.titulo }}" class="w-full h-40 rounded-xl border border-gray-200 shadow-inner"></iframe>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm text-center max-w-md mx-auto my-12">
+                <i class="fa-solid fa-book-open text-4xl text-gray-300 mb-3 block"></i>
+                <p class="text-sm font-semibold text-gray-600">No hay libros registrados actualmente.</p>
+            </div>
+        {% endif %}
+
+    <!-- SECCIÓN DE ARTÍCULOS -->
+    {% else %}
+        {% if articulos %}
+            <div class="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-6 space-y-6">
+                {% for articulo in articulos %}
+                <div class="break-inside-avoid mb-6 w-full bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden p-4 hover:shadow-md transition relative">
+                    <div>
+                        {% if articulo.portada %}
+                            <div class="w-full rounded-2xl overflow-hidden mb-3 border border-gray-100 relative bg-gray-50">
+                                <img src="{{ articulo.portada.url }}" class="w-full h-auto object-cover rounded-2xl" alt="{{ articulo.titulo }}">
+                                <div class="absolute top-2 right-2">
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-600 text-white shadow">
+                                        {{ articulo.creado_por_rol|default:"Publicador" }}
+                                    </span>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="w-full rounded-2xl overflow-hidden mb-3 p-3 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100/60 flex items-center justify-between">
+                                <div class="flex items-center gap-2 text-purple-700">
+                                    <i class="fa-solid fa-newspaper text-base"></i>
+                                    <span class="text-[10px] font-bold uppercase tracking-wide">Artículo Académico</span>
+                                </div>
+                                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-600 text-white shadow">{{ articulo.creado_por_rol|default:"Publicador" }}</span>
+                            </div>
+                        {% endif %}
+
+                        <h3 class="font-bold text-gray-800 text-base leading-snug">{{ articulo.titulo }}</h3>
+                        <p class="text-xs text-gray-500 mt-1">Autor: <span class="font-medium text-gray-700">{{ articulo.autor }}</span></p>
+                    </div>
+
+                    <div class="mt-4 space-y-2">
+                        <details class="group border-t border-gray-100 pt-3 text-xs">
+                            <summary class="flex items-center justify-between cursor-pointer font-semibold text-[#1d82dc] select-none">
+                                <span class="flex items-center gap-1.5"><i class="fa-solid fa-align-left text-xs"></i> Resumen</span>
+                                <i class="fa-solid fa-chevron-down text-[10px] group-open:rotate-180 transition-transform"></i>
+                            </summary>
+                            <p class="mt-2 text-gray-600 bg-gray-50 p-3 rounded-2xl border border-gray-100 text-[11px]">
+                                {{ articulo.resumen|default:"Sin resumen disponible." }}
+                            </p>
+                        </details>
+
+                        {% if articulo.archivo %}
+                        <div class="mt-3 border-t border-gray-100 pt-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <p class="text-xs font-semibold text-gray-500 flex items-center gap-1">
+                                    <i class="fa-solid fa-eye text-[#1d82dc]"></i> Vista previa:
+                                </p>
+                                <button type="button" 
+                                        onclick="abrirVistaPreviaModal('{{ articulo.archivo.url }}', '{{ articulo.titulo|escapejs }}')"
+                                        class="text-[11px] font-bold text-[#1d82dc] hover:text-blue-700 flex items-center gap-1 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100 transition shadow-xs active:scale-95">
+                                    <i class="fa-solid fa-expand"></i> Abrir vista previa
+                                </button>
+                            </div>
+                            <iframe src="{{ articulo.archivo.url }}" title="Vista previa de {{ articulo.titulo }}" class="w-full h-40 rounded-xl border border-gray-200 shadow-inner"></iframe>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm text-center max-w-md mx-auto my-12">
+                <i class="fa-solid fa-newspaper text-4xl text-gray-300 mb-3 block"></i>
+                <p class="text-sm font-semibold text-gray-600">No hay artículos registrados actualmente.</p>
+            </div>
+        {% endif %}
+    {% endif %}
+
+</div>
+
+<!-- MODAL PLANO BIBLIOTECA -->
+<div id="modal-mapa" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 transition-opacity">
+    <div class="bg-white rounded-3xl max-w-4xl w-full p-6 shadow-2xl border border-gray-100 space-y-4 relative overflow-hidden">
+        
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-map"></i>
+                </div>
+                <div>
+                    <h2 class="font-bold text-gray-800 text-base">Ubicación Física en Plano</h2>
+                    <p id="subtitulo-mapa" class="text-xs text-gray-400">Selecciona un libro para ubicarlo</p>
+                </div>
+            </div>
+            <button onclick="toggleMapaModal()" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div id="lienzoMapaModal" 
+             data-api-url="{% url 'obtener_mapa_api' %}"
+             data-prestamos-count="{{ prestamos_activos_count|default:0 }}"
+             class="relative w-full h-[400px] bg-amber-50/40 border-2 border-dashed border-amber-300 rounded-2xl overflow-hidden select-none">
+
+            <div id="pin-seleccionado" class="hidden absolute transform -translate-x-1/2 -translate-y-1/2 z-30 transition-all duration-300 ease-out">
+                <div id="pin-halo" class="absolute -inset-2 rounded-full bg-emerald-500/40 animate-ping"></div>
+                <div id="pin-icono" class="relative w-10 h-10 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-2xl border-2 border-white text-base">
+                    <i class="fa-solid fa-location-dot"></i>
+                </div>
+
+                <div class="absolute bottom-12 left-1/2 transform -translate-x-1/2 w-60 bg-gray-900/95 backdrop-blur-md text-white p-3.5 rounded-2xl shadow-2xl text-xs border border-gray-700">
+                    <p id="mapa-libro-titulo" class="font-bold text-white leading-tight truncate"></p>
+                    <p id="mapa-libro-autor" class="text-[10px] text-gray-400 mt-0.5 truncate"></p>
+                    
+                    <div class="mt-2 pt-2 border-t border-gray-800 flex items-center justify-between">
+                        <span id="mapa-libro-ubicacion" class="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
+                            <i class="fa-solid fa-location-dot"></i> <span id="texto-ubicacion" class="truncate"></span>
+                        </span>
+                        <span id="mapa-libro-estado" class="px-2 py-0.5 rounded text-[9px] font-black uppercase"></span>
+                    </div>
+
+                    <div id="contenedor-prestamo-modal" class="mt-3">
+                        <form id="form-prestamo-mapa" method="POST" action="">
+                            {% csrf_token %}
+                            <button type="submit" id="btn-prestamo-mapa" class="w-full bg-[#1d82dc] hover:bg-blue-600 text-white py-1.5 px-2 rounded-xl text-[11px] font-bold shadow transition">
+                                Pedir Prestado Este Libro (5 Días)
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- MODAL VISTA PREVIA COMPLETA -->
+<div id="modal-vista-previa" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 transition-opacity">
+    <div class="bg-white rounded-3xl max-w-5xl w-full h-[85vh] p-6 shadow-2xl border border-gray-100 flex flex-col space-y-4 relative overflow-hidden">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+            <div class="flex items-center gap-3 truncate">
+                <div class="w-10 h-10 bg-blue-50 text-[#1d82dc] rounded-xl flex items-center justify-center text-lg shrink-0">
+                    <i class="fa-solid fa-file-pdf"></i>
+                </div>
+                <div class="truncate">
+                    <h2 id="titulo-modal-previa" class="font-bold text-gray-800 text-base truncate">Vista Previa del Documento</h2>
+                    <p class="text-xs text-gray-400">Visualizador amplio de archivo adjunto</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <a id="btn-abrir-nueva-pestana" href="javascript:void(0)" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-xs transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Nueva pestaña
+                </a>
+                <button onclick="cerrarVistaPreviaModal()" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+        <div class="flex-1 w-full h-full bg-gray-50 rounded-2xl overflow-hidden border border-gray-200">
+            <iframe id="iframe-modal-previa" src="" title="Lector de documento" class="w-full h-full rounded-2xl"></iframe>
+        </div>
+    </div>
+</div>
+
+<script>
+    function obtenerDatosLienzo() {
+        const lienzo = document.getElementById('lienzoMapaModal');
+        if (!lienzo) return { apiUrl: '', esMaxPrestamos: false };
+        const apiUrl = lienzo.dataset.apiUrl || '';
+        const count = parseInt(lienzo.dataset.prestamosCount || '0', 10);
+        return { apiUrl, esMaxPrestamos: count >= 2 };
+    }
+
+    function abrirVistaPreviaModal(url, titulo) {
+        const modal = document.getElementById('modal-vista-previa');
+        const iframe = document.getElementById('iframe-modal-previa');
+        const tituloEl = document.getElementById('titulo-modal-previa');
+        const btnPestana = document.getElementById('btn-abrir-nueva-pestana');
+
+        if (iframe) iframe.src = url;
+        if (tituloEl) tituloEl.textContent = titulo || 'Vista Previa del Documento';
+        if (btnPestana) btnPestana.href = url;
+
+        if (modal) modal.classList.remove('hidden');
+    }
+
+    function cerrarVistaPreviaModal() {
+        const modal = document.getElementById('modal-vista-previa');
+        const iframe = document.getElementById('iframe-modal-previa');
+        if (modal) modal.classList.add('hidden');
+        if (iframe) iframe.src = '';
+    }
+
+    async function cargarMapaModal() {
+        const lienzo = document.getElementById('lienzoMapaModal');
+        if (!lienzo) return;
+
+        const { apiUrl } = obtenerDatosLienzo();
+        lienzo.querySelectorAll('.map-item').forEach(el => el.remove());
+
+        let elementosGuardados = [];
+        if (apiUrl) {
+            try {
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                elementosGuardados = data.elementos || [];
+            } catch (e) {
+                console.error('Error al obtener estructura del mapa:', e);
+            }
+        }
+
+        elementosGuardados.forEach(item => {
+            const div = document.createElement('div');
+            const esEstante = item.tipo === 'estante';
+            div.className = 'map-item absolute rounded flex items-center justify-center text-[10px] font-bold pointer-events-none ' + 
+                            (esEstante ? 'bg-amber-200 border border-amber-400 text-amber-900 shadow-sm' : 'bg-gray-400 opacity-60 text-white');
+            div.style.left = item.x + '%';
+            div.style.top = item.y + '%';
+            div.style.width = item.w + '%';
+            div.style.height = item.h + '%';
+            div.textContent = item.nombre;
+            lienzo.appendChild(div);
+        });
+    }
+
+    function toggleMapaModal() {
+        const modal = document.getElementById('modal-mapa');
+        if (modal) {
+            modal.classList.toggle('hidden');
+            if (!modal.classList.contains('hidden')) {
+                cargarMapaModal();
+            }
+        }
+    }
+
+    async function seleccionarYMostrarDocumento(button, esLibro = true) {
+        const titulo = button.getAttribute('data-titulo') || '';
+        const autor = button.getAttribute('data-autor') || '';
+        const ubicacion = button.getAttribute('data-ubicacion') || 'Estante General';
+        const estado = button.getAttribute('data-estado') || 'Disponible';
+        const posX = button.getAttribute('data-x') || 50;
+        const posY = button.getAttribute('data-y') || 50;
+        const prestamoUrl = button.getAttribute('data-prestamo-url') || '';
+
+        const pin = document.getElementById('pin-seleccionado');
+        const pinIcono = document.getElementById('pin-icono');
+        const pinHalo = document.getElementById('pin-halo');
+        const formPrestamo = document.getElementById('form-prestamo-mapa');
+        const btnPrestamo = document.getElementById('btn-prestamo-mapa');
+        const contenedorPrestamo = document.getElementById('contenedor-prestamo-modal');
+        const textoUbicacion = document.getElementById('texto-ubicacion');
+
+        if (pin) {
+            pin.style.left = posX + '%';
+            pin.style.top = posY + '%';
+        }
+
+        await cargarMapaModal();
+
+        const subtitulo = document.getElementById('subtitulo-mapa');
+        const elTitulo = document.getElementById('mapa-libro-titulo');
+        const elAutor = document.getElementById('mapa-libro-autor');
+        if (subtitulo) subtitulo.textContent = titulo;
+        if (elTitulo) elTitulo.textContent = titulo;
+        if (elAutor) elAutor.textContent = 'Autor: ' + autor;
+        if (textoUbicacion) textoUbicacion.textContent = ubicacion;
+        
+        const badgeEstado = document.getElementById('mapa-libro-estado');
+        if (badgeEstado) badgeEstado.textContent = estado;
+
+        if (contenedorPrestamo) contenedorPrestamo.classList.remove('hidden');
+        if (formPrestamo && prestamoUrl) formPrestamo.action = prestamoUrl;
+
+        const { esMaxPrestamos } = obtenerDatosLienzo();
+
+        if (btnPrestamo && badgeEstado && pinIcono && pinHalo) {
+            if (estado === 'Prestado') {
+                badgeEstado.className = 'px-2 py-0.5 rounded text-[9px] font-black bg-emerald-600 text-white shadow';
+                pinIcono.className = 'relative w-10 h-10 bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-2xl border-2 border-white text-base';
+                pinHalo.className = 'absolute -inset-2 rounded-full bg-emerald-600/40 animate-ping';
+                btnPrestamo.disabled = true;
+                btnPrestamo.className = 'w-full bg-gray-700 text-gray-400 py-1.5 px-2 rounded-xl text-[11px] font-bold cursor-not-allowed';
+                btnPrestamo.textContent = 'En Préstamo (5 días)';
+            } else if (estado === 'En devolucion') {
+                badgeEstado.className = 'px-2 py-0.5 rounded text-[9px] font-black bg-rose-600 text-white shadow';
+                pinIcono.className = 'relative w-10 h-10 bg-rose-600 text-white rounded-full flex items-center justify-center shadow-2xl border-2 border-white text-base';
+                pinHalo.className = 'absolute -inset-2 rounded-full bg-rose-600/40 animate-ping';
+                btnPrestamo.disabled = true;
+                btnPrestamo.className = 'w-full bg-gray-700 text-gray-400 py-1.5 px-2 rounded-xl text-[11px] font-bold cursor-not-allowed';
+                btnPrestamo.textContent = 'En Devolución (Vencido)';
+            } else if (estado === 'Disponible') {
+                if (esMaxPrestamos) {
+                    badgeEstado.className = 'px-2 py-0.5 rounded text-[9px] font-black bg-emerald-500 text-white shadow';
+                    pinIcono.className = 'relative w-10 h-10 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-2xl border-2 border-white text-base';
+                    pinHalo.className = 'absolute -inset-2 rounded-full bg-emerald-500/40 animate-ping';
+                    btnPrestamo.disabled = true;
+                    btnPrestamo.className = 'w-full bg-gray-700 text-gray-400 py-1.5 px-2 rounded-xl text-[11px] font-bold cursor-not-allowed';
+                    btnPrestamo.textContent = 'Límite Alcanzado (2/2)';
+                } else {
+                    badgeEstado.className = 'px-2 py-0.5 rounded text-[9px] font-black bg-emerald-500 text-white shadow';
+                    pinIcono.className = 'relative w-10 h-10 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-2xl border-2 border-white text-base';
+                    pinHalo.className = 'absolute -inset-2 rounded-full bg-emerald-500/40 animate-ping';
+                    btnPrestamo.disabled = false;
+                    btnPrestamo.className = 'w-full bg-[#1d82dc] hover:bg-blue-600 text-white py-1.5 px-2 rounded-xl text-[11px] font-bold shadow transition';
+                    btnPrestamo.textContent = 'Pedir Prestado Este Libro (5 Días)';
+                }
+            } else {
+                badgeEstado.className = 'px-2 py-0.5 rounded text-[9px] font-black bg-purple-500 text-white shadow';
+                pinIcono.className = 'relative w-10 h-10 bg-purple-500 text-white rounded-full flex items-center justify-center shadow-2xl border-2 border-white text-base';
+                pinHalo.className = 'absolute -inset-2 rounded-full bg-purple-500/40 animate-ping';
+                btnPrestamo.disabled = true;
+                btnPrestamo.className = 'w-full bg-gray-700 text-gray-400 py-1.5 px-2 rounded-xl text-[11px] font-bold cursor-not-allowed';
+                btnPrestamo.textContent = 'No Disponible (' + estado + ')';
+            }
+        }
+
+        if (pin) pin.classList.remove('hidden');
+        const modal = document.getElementById('modal-mapa');
+        if (modal) modal.classList.remove('hidden');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        cargarMapaModal();
+    });
+</script>
+{% endblock %}
